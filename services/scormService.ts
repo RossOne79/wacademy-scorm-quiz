@@ -72,6 +72,20 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
     }
 };
 
+/**
+ * ⚠️ REGOLA CRITICA: In questo template HTML, usa SEMPRE virgolette doppie (") per le stringhe JavaScript.
+ * NON usare MAI apostrofi singoli (') per le stringhe JavaScript - causano errori di sintassi!
+ * 
+ * Esempi CORRETTI:
+ *   document.getElementById("id") ✅
+ *   video.addEventListener("click", ...) ✅
+ *   console.warn("messaggio", e) ✅
+ * 
+ * Esempi SBAGLIATI:
+ *   document.getElementById('id') ❌
+ *   video.addEventListener('click', ...) ❌
+ *   console.warn('messaggio', e) ❌
+ */
 const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
     const { videoData, learningObjectives, quizBank, settings } = data;
     const finalQuiz = quizBank.slice(0, settings.numQuestions);
@@ -197,15 +211,261 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       }
 
       function renderVideoPage() {
+        const showControls = courseData.settings.showVideoControls !== false;
+        const controlsAttr = showControls ? "controls" : "";
+        const customControlsHTML = showControls ? "" : \`
+              <div class="mt-4 flex items-center justify-between">
+                <button id="playPauseBtn" class="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 flex items-center gap-2">
+                  <span id="playPauseText">Play</span>
+                </button>
+                <div class="text-sm text-gray-600">
+                  <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+                </div>
+              </div>
+              \`;
         app.innerHTML = \`
           <div class="bg-white p-8 rounded-lg shadow-lg">
             <h1 class="text-3xl font-bold mb-4">\${courseData.title}</h1>
-            <video controls src="video.mp4" class="w-full rounded-md mb-6"></video>
+            <div class="relative mb-6">
+              <video id="courseVideo" src="video.mp4" class="w-full rounded-md" playsinline \${controlsAttr}></video>
+              \${customControlsHTML}
+            </div>
             <div class="flex justify-end">
-              <button onclick="startQuiz()" class="bg-blue-600 text-white px-8 py-3 rounded-md font-semibold hover:bg-blue-700">Inizia Quiz</button>
+              <button id="quizBtn" onclick="startQuiz()" class="bg-gray-400 text-white px-8 py-3 rounded-md font-semibold cursor-not-allowed" disabled>Inizia Quiz</button>
             </div>
           </div>
         \`;
+        
+        // Initialize video player
+        initVideoPlayer();
+      }
+      
+      function initVideoPlayer() {
+        const video = document.getElementById("courseVideo");
+        const playPauseBtn = document.getElementById("playPauseBtn");
+        const playPauseText = document.getElementById("playPauseText");
+        const quizBtn = document.getElementById("quizBtn");
+        const currentTimeSpan = document.getElementById("currentTime");
+        const totalTimeSpan = document.getElementById("totalTime");
+        
+        if (!video || !quizBtn) return;
+        
+        const showControls = courseData.settings.showVideoControls !== false;
+        
+        let maxWatched = 0;        // Tempo massimo visto dall'utente
+        let lastValidTime = 0;      // Ultimo tempo valido (per bloccare seek)
+        let isSeeking = false;      // Flag per evitare loop durante il blocco
+        
+        // Formatta il tempo in mm:ss
+        function formatTime(seconds) {
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return mins + ':' + secs.toString().padStart(2, '0');
+        }
+        
+        // Carica il progresso salvato da SCORM
+        function loadProgress() {
+          if (!API) return;
+          try {
+            const suspendKey = courseData.settings.scormVersion === "1.2" ? "cmi.suspend_data" : "cmi.suspend_data";
+            const getValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSGetValue" : "GetValue";
+            const rawData = API[getValueMethod](suspendKey);
+            
+            if (rawData && rawData.trim() !== '') {
+              const data = JSON.parse(rawData);
+              if (typeof data.maxWatched === 'number' && data.maxWatched > 0) {
+                maxWatched = data.maxWatched;
+                lastValidTime = maxWatched;
+                video.currentTime = maxWatched;
+              }
+            }
+          } catch (e) {
+            console.warn("Errore nel caricamento del progresso:", e);
+          }
+        }
+        
+        // Salva il progresso in SCORM
+        function saveProgress() {
+          if (!API) return;
+          try {
+            const suspendKey = courseData.settings.scormVersion === "1.2" ? "cmi.suspend_data" : "cmi.suspend_data";
+            const setValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSSetValue" : "SetValue";
+            const commitMethod = courseData.settings.scormVersion === "1.2" ? "LMSCommit" : "Commit";
+            
+            const data = JSON.stringify({ maxWatched: maxWatched });
+            API[setValueMethod](suspendKey, data);
+            API[commitMethod]("");
+          } catch (e) {
+            console.warn("Errore nel salvataggio del progresso:", e);
+          }
+        }
+        
+        // Aggiorna il tempo visualizzato
+        function updateTimeDisplay() {
+          if (!showControls && currentTimeSpan) {
+            currentTimeSpan.textContent = formatTime(video.currentTime);
+          }
+          if (!showControls && totalTimeSpan && video.duration) {
+            totalTimeSpan.textContent = formatTime(video.duration);
+          }
+        }
+        
+        // Event listener per il tempo corrente
+        video.addEventListener("timeupdate", () => {
+          const currentTime = video.currentTime;
+          
+          // Aggiorna il tempo massimo visto
+          // Se i controlli sono visibili, aggiorna sempre
+          // Se i controlli sono nascosti, aggiorna solo se non stiamo facendo seek
+          if (showControls || !isSeeking) {
+            if (currentTime > maxWatched) {
+              maxWatched = currentTime;
+              if (!showControls) {
+                lastValidTime = currentTime;
+              }
+              saveProgress();
+            }
+          }
+          
+          updateTimeDisplay();
+        });
+        
+        // Blocca qualsiasi tentativo di seek (avanti o indietro) solo se i controlli sono nascosti
+        if (!showControls) {
+          video.addEventListener("seeking", () => {
+            isSeeking = true;
+            const currentTime = video.currentTime;
+            
+            // Blocca qualsiasi movimento indietro
+            if (currentTime < lastValidTime - 0.5) {
+              video.currentTime = lastValidTime;
+              return;
+            }
+            
+            // Blocca qualsiasi movimento avanti oltre il massimo visto
+            if (currentTime > maxWatched + 0.5) {
+              video.currentTime = maxWatched;
+              return;
+            }
+            
+            // Permetti solo piccole variazioni dovute al normale avanzamento
+            if (Math.abs(currentTime - lastValidTime) > 1.0) {
+              video.currentTime = lastValidTime;
+            }
+          });
+          
+          video.addEventListener("seeked", () => {
+            isSeeking = false;
+            const currentTime = video.currentTime;
+            
+            // Assicurati che siamo ancora nella posizione valida
+            if (currentTime < lastValidTime - 0.5) {
+              video.currentTime = lastValidTime;
+            } else if (currentTime > maxWatched + 0.5) {
+              video.currentTime = maxWatched;
+            } else {
+              // Aggiorna lastValidTime solo se siamo in una posizione valida
+              lastValidTime = currentTime;
+            }
+          });
+        }
+        
+        // Blocca anche i tentativi tramite la barra di progresso (se presente)
+        video.addEventListener("loadedmetadata", () => {
+          updateTimeDisplay();
+          // Imposta i controlli in base all'impostazione
+          video.controls = showControls;
+          // Disabilita Picture-in-Picture se supportato
+          if (video.disablePictureInPicture !== undefined) {
+            video.disablePictureInPicture = true;
+          }
+        });
+        
+        // Blocca i tasti freccia e altri tasti di navigazione video solo se i controlli sono nascosti
+        if (!showControls) {
+          video.addEventListener("keydown", (e) => {
+            // Blocca freccia sinistra/destra (seek), spazio (play/pause gestito dal nostro bottone)
+            if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          });
+          
+          // Blocca anche i click diretti sulla barra di progresso (se dovesse apparire)
+          video.addEventListener("click", (e) => {
+            // Se il click è sulla parte inferiore del video (dove potrebbe esserci la barra di progresso)
+            const rect = video.getBoundingClientRect();
+            const clickY = e.clientY - rect.top;
+            const videoHeight = rect.height;
+            // Se il click è nell'ultimo 10% del video (dove di solito c'è la barra di progresso)
+            if (clickY > videoHeight * 0.9) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          });
+          
+          // Gestione play/pausa con controlli custom
+          if (playPauseBtn) {
+            playPauseBtn.addEventListener("click", () => {
+              if (video.paused) {
+                video.play();
+                if (playPauseText) playPauseText.textContent = "Pausa";
+              } else {
+                video.pause();
+                if (playPauseText) playPauseText.textContent = "Play";
+              }
+            });
+            
+            // Aggiorna il testo del pulsante quando il video cambia stato
+            video.addEventListener("play", () => {
+              if (playPauseText) playPauseText.textContent = "Pausa";
+            });
+            
+            video.addEventListener("pause", () => {
+              if (playPauseText) playPauseText.textContent = "Play";
+            });
+          }
+        }
+        
+        // Abilita il quiz solo quando il video è completato
+        video.addEventListener("ended", () => {
+          if (!showControls && playPauseBtn && playPauseText) {
+            playPauseText.textContent = "Completato";
+            playPauseBtn.disabled = true;
+            playPauseBtn.classList.add("opacity-50", "cursor-not-allowed");
+          }
+          
+          // Abilita il pulsante quiz
+          quizBtn.disabled = false;
+          quizBtn.classList.remove("bg-gray-400", "cursor-not-allowed");
+          quizBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
+          
+          // Segna il corso come completato in SCORM
+          if (API) {
+            try {
+              if (courseData.settings.scormVersion === "1.2") {
+                API.LMSSetValue("cmi.core.lesson_status", "completed");
+                API.LMSCommit("");
+              } else {
+                API.SetValue("cmi.completion_status", "completed");
+                API.Commit("");
+              }
+            } catch (e) {
+              console.warn("Errore nell\\'aggiornamento dello stato SCORM:", e);
+            }
+          }
+        });
+        
+        // Carica il progresso all'inizio
+        video.addEventListener("loadeddata", () => {
+          loadProgress();
+          updateTimeDisplay();
+        });
+        
+        // Aggiorna il tempo totale quando disponibile
+        video.addEventListener("durationchange", () => {
+          updateTimeDisplay();
+        });
       }
 
       function startQuiz() {
@@ -384,9 +644,11 @@ export const testInBrowser = async (data: ScormPackageData) => {
 
     if (newWindow) {
         newWindow.onload = () => {
-            const videoElement = newWindow.document.querySelector('video');
+            const videoElement = newWindow.document.querySelector('#courseVideo');
             if (videoElement) {
                 videoElement.src = videoUrl;
+                // Assicurati che il video sia inizializzato correttamente
+                videoElement.load();
             }
         };
     } else {

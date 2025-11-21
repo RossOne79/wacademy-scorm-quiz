@@ -1,0 +1,82 @@
+# Cursor Rules - mediaToScorm Project
+
+## ⚠️ REGOLE CRITICHE - NON MODIFICARE
+
+### 1. Template HTML in `services/scormService.ts`
+
+**IMPORTANTE**: Il file `services/scormService.ts` contiene template HTML che generano codice JavaScript inline. 
+
+**REGOLA OBBLIGATORIA**:
+- ✅ **USA SEMPRE virgolette doppie (`"`) per le stringhe JavaScript dentro il template HTML**
+- ❌ **NON USARE MAI apostrofi singoli (`'`) per le stringhe JavaScript dentro il template HTML**
+
+**Motivo**: Gli apostrofi singoli causano errori di sintassi quando il template viene generato perché sono dentro un template literal TypeScript che usa backtick.
+
+**Esempi CORRETTI**:
+```javascript
+const video = document.getElementById("courseVideo");  // ✅ CORRETTO
+video.addEventListener("click", () => { ... });        // ✅ CORRETTO
+console.warn("Messaggio", e);                         // ✅ CORRETTO
+```
+
+**Esempi SBAGLIATI**:
+```javascript
+const video = document.getElementById('courseVideo');  // ❌ SBAGLIATO
+video.addEventListener('click', () => { ... });        // ❌ SBAGLIATO
+console.warn('Messaggio', e);                         // ❌ SBAGLIATO
+```
+
+### 2. Escape delle stringhe nel template HTML
+
+- Quando devi includere un apostrofo dentro una stringa JavaScript, usa `\\'` (doppio escape)
+- Oppure usa template literals JavaScript con backtick se necessario
+- Per concatenazione di stringhe, usa `+` invece di template literals annidati quando possibile
+
+**Esempio**:
+```javascript
+// ✅ CORRETTO
+console.warn("Errore nell\\'aggiornamento:", e);
+
+// ✅ CORRETTO (meglio)
+function formatTime(seconds) {
+  return mins + ':' + secs.toString().padStart(2, '0');
+}
+```
+
+### 3. Attributi HTML nel template
+
+- **NON usare** attributi HTML non standard come `disablepictureinpicture` direttamente nel tag
+- Se necessario, gestisci via JavaScript dopo il caricamento:
+```javascript
+video.addEventListener("loadedmetadata", () => {
+  if (video.disablePictureInPicture !== undefined) {
+    video.disablePictureInPicture = true;
+  }
+});
+```
+
+### 4. Template Literals annidati
+
+- Evita template literals JavaScript annidati dentro il template TypeScript quando possibile
+- Preferisci concatenazione di stringhe (`+`) per semplicità e sicurezza
+
+### 5. Test prima di modificare `scormService.ts`
+
+Prima di modificare `services/scormService.ts`:
+1. ✅ Verifica che tutte le stringhe JavaScript usino virgolette doppie
+2. ✅ Testa la generazione del pacchetto SCORM dopo le modifiche
+3. ✅ Controlla la console del browser per errori di sintassi JavaScript
+
+## 📝 Note Generali
+
+- Il file `scormService.ts` genera HTML che viene eseguito come codice JavaScript
+- Qualsiasi errore di sintassi nel template HTML causerà il fallimento della generazione del pacchetto SCORM
+- Quando in dubbio, preferisci virgolette doppie per le stringhe JavaScript
+
+## 🔍 Come verificare
+
+Dopo modifiche a `scormService.ts`:
+1. Prova a generare un pacchetto SCORM
+2. Controlla la console del browser per errori
+3. Se vedi errori tipo "missing ) after argument list" o "Uncaught SyntaxError", probabilmente c'è un problema con le virgolette/apostrofi
+

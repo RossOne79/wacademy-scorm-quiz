@@ -47,6 +47,7 @@ export interface SCORMSettings {
   randomizeOrder: boolean;
   passingScore: number;
   attemptLimit: number; // 0 for unlimited
+  showVideoControls: boolean; // Mostra/nascondi controlli video nativi
 }
 
 export interface VideoData {

@@ -99,6 +99,16 @@ const PackageStep: React.FC<PackageStepProps> = ({
                             <label htmlFor="randomizeOrder" className="font-medium text-gray-700 dark:text-gray-300">Ordina domande in modo casuale</label>
                         </div>
                     </div>
+
+                    <div className="relative flex items-start">
+                        <div className="flex h-5 items-center">
+                            <input id="showVideoControls" type="checkbox" checked={settings.showVideoControls} onChange={e => onSettingsChange({...settings, showVideoControls: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                        </div>
+                        <div className="ml-3 text-sm">
+                            <label htmlFor="showVideoControls" className="font-medium text-gray-700 dark:text-gray-300">Mostra controlli video nativi</label>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">Se disattivato, il video può essere controllato solo tramite il pulsante Play/Pausa (no seek avanti/indietro)</p>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Preview & Actions */}

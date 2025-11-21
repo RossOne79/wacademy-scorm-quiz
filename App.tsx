@@ -25,6 +25,7 @@ const AppContent: React.FC = () => {
     randomizeOrder: true,
     passingScore: 80,
     attemptLimit: 0,
+    showVideoControls: false,
   });
   const [isThemeCustomizerOpen, setIsThemeCustomizerOpen] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
@@ -102,6 +103,7 @@ const AppContent: React.FC = () => {
         randomizeOrder: true,
         passingScore: 80,
         attemptLimit: 0,
+        showVideoControls: false,
       });
       showToast('Sessione cancellata', 'info');
     }
