@@ -22,21 +22,22 @@ const quizGenerationSchema = {
             items: {
                 type: Type.OBJECT,
                 properties: {
-                    type: { type: Type.STRING, description: "Tipo di domanda. Deve essere uno tra: 'mcq', 'true_false', 'short_answer'." },
+                    type: { type: Type.STRING, description: "Tipo di domanda. Deve essere SOLO uno tra: 'mcq' (scelta multipla) o 'true_false' (vero/falso). NON usare 'short_answer'." },
                     difficulty: { type: Type.STRING, description: "Difficoltà della domanda. Deve essere uno tra: 'easy', 'medium', 'hard'." },
                     cognitive_level: { type: Type.STRING, description: "Livello cognitivo della domanda. Deve essere uno tra: 'recall', 'understand', 'apply'." },
                     stem: { type: Type.STRING, description: "Il testo della domanda." },
                     choices: {
                         type: Type.ARRAY,
-                        description: "Per le domande 'mcq', deve essere un array contenente un singolo oggetto con chiavi 'A', 'B', 'C', e 'D' per le quattro opzioni. Può essere omesso per altri tipi di domanda.",
+                        description: "OBBLIGATORIO per le domande 'mcq': deve essere un array con UN SOLO oggetto contenente ESATTAMENTE le chiavi 'A', 'B', 'C', 'D' con le quattro opzioni di risposta. NON omettere mai per domande mcq.",
                         items: {
                             type: Type.OBJECT,
                             properties: {
-                                A: { type: Type.STRING },
-                                B: { type: Type.STRING },
-                                C: { type: Type.STRING },
-                                D: { type: Type.STRING }
+                                A: { type: Type.STRING, description: "Prima opzione di risposta" },
+                                B: { type: Type.STRING, description: "Seconda opzione di risposta" },
+                                C: { type: Type.STRING, description: "Terza opzione di risposta" },
+                                D: { type: Type.STRING, description: "Quarta opzione di risposta" }
                             },
+                            required: ["A", "B", "C", "D"]
                         }
                     },
                     correct_answer: { type: Type.STRING, description: "La risposta corretta. Per MCQ, la lettera (es. 'B'). Per vero/falso, 'True' o 'False'. Per risposta breve, una risposta concisa." },
@@ -94,8 +95,17 @@ export async function generateQuizAndObjectives(videoData: VideoData, transcript
         2.  Generare una banca di 20 domande del quiz basate ESCLUSIVAMENTE sulla trascrizione.
         3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: 50% facile (10), 35% medio (7), 15% difficile (3).
         4.  Le domande devono coprire un mix di livelli cognitivi: rievocazione, comprensione e applicazione.
-        5.  Per ogni domanda, identifica i timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi) che giustifichino la domanda. Poiché non hai i timestamp esatti dalla trascrizione, stima una posizione temporale realistica per dove l'informazione potrebbe apparire nel video.
-        6.  Per le domande a scelta multipla (MCQ), crea una risposta inequivocabilmente corretta e tre distrattori plausibili ma errati. Fornisci motivazioni sia per le risposte corrette che per quelle errate.
+        5.  Per ogni domanda, identifica i timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi).
+        
+        6.  TIPI DI DOMANDE: Usa SOLO questi due tipi:
+            - "mcq" (scelta multipla con 4 opzioni A, B, C, D)
+            - "true_false" (vero o falso)
+            - NON usare MAI "short_answer" - questo tipo NON è supportato
+            
+        7.  Per OGNI domanda MCQ il campo "choices" è OBBLIGATORIO:
+            - Deve contenere un array con UN oggetto
+            - L'oggetto DEVE avere ESATTAMENTE 4 chiavi: "A", "B", "C", "D"
+            - Esempio: "choices": [{"A": "Prima opzione", "B": "Seconda opzione", "C": "Terza opzione", "D": "Quarta opzione"}]
 
         Restituisci un singolo oggetto JSON che segua lo schema fornito. Non includere alcuna formattazione markdown.
         TUTTO L'OUTPUT TESTUALE (obiettivi, domande, scelte, motivazioni) DEVE ESSERE IN ITALIANO.
@@ -113,8 +123,17 @@ export async function generateQuizAndObjectives(videoData: VideoData, transcript
         2.  Generare una banca di 20 domande del quiz basate ESCLUSIVAMENTE sul contenuto dedotto.
         3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: 50% facile (10), 35% medio (7), 15% difficile (3).
         4.  Le domande devono coprire un mix di livelli cognitivi: rievocazione, comprensione e applicazione.
-        5.  Per ogni domanda, inventa dei timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi) che giustifichino la domanda e le risposte. I timestamp dovrebbero essere realistici per il flusso di un video educativo.
-        6.  Per le domande a scelta multipla (MCQ), crea una risposta inequivocabilmente corretta e tre distrattori plausibili ma errati. Fornisci motivazioni sia per le risposte corrette che per quelle errate.
+        5.  Per ogni domanda, inventa dei timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi).
+        
+        6.  TIPI DI DOMANDE: Usa SOLO questi due tipi:
+            - "mcq" (scelta multipla con 4 opzioni A, B, C, D)
+            - "true_false" (vero o falso)
+            - NON usare MAI "short_answer" - questo tipo NON è supportato
+            
+        7.  Per OGNI domanda MCQ il campo "choices" è OBBLIGATORIO:
+            - Deve contenere un array con UN oggetto
+            - L'oggetto DEVE avere ESATTAMENTE 4 chiavi: "A", "B", "C", "D"
+            - Esempio: "choices": [{"A": "Prima opzione", "B": "Seconda opzione", "C": "Terza opzione", "D": "Quarta opzione"}]
 
         Restituisci un singolo oggetto JSON che segua lo schema fornito. Non includere alcuna formattazione markdown.
         TUTTO L'OUTPUT TESTUALE (obiettivi, domande, scelte, motivazioni) DEVE ESSERE IN ITALIANO.
@@ -138,6 +157,62 @@ export async function generateQuizAndObjectives(videoData: VideoData, transcript
         if (!parsedJson.learningObjectives || !parsedJson.quizBank) {
             throw new Error("AI response is missing required fields.");
         }
+
+        // DEBUG: Log raw response from Gemini
+        console.log("=== DEBUG: Raw Gemini Response ===");
+        console.log("Total questions received:", parsedJson.quizBank.length);
+        parsedJson.quizBank.forEach((q: any, i: number) => {
+            console.log(`Question ${i + 1}:`, {
+                type: q.type,
+                stem: q.stem?.substring(0, 50) + "...",
+                hasChoices: !!q.choices,
+                choicesLength: q.choices?.length,
+                choices: q.choices
+            });
+        });
+
+        // Valida e filtra domande non supportate o malformate
+        const originalCount = parsedJson.quizBank.length;
+        parsedJson.quizBank = parsedJson.quizBank.filter((q: QuizQuestion) => {
+            const qType = (q.type || "").toLowerCase();
+            
+            // Scarta short_answer (non supportato)
+            if (qType === 'short_answer') {
+                console.warn("❌ Domanda short_answer scartata (non supportata):", q.stem);
+                return false;
+            }
+            
+            // Verifica che MCQ abbia choices valide
+            if (qType === 'mcq') {
+                if (!q.choices || !Array.isArray(q.choices) || q.choices.length === 0) {
+                    console.warn("❌ Domanda MCQ scartata: mancano le opzioni di risposta", q.stem);
+                    return false;
+                }
+                const firstChoice = q.choices[0];
+                if (!firstChoice || !firstChoice.A || !firstChoice.B || !firstChoice.C || !firstChoice.D) {
+                    console.warn("❌ Domanda MCQ scartata: opzioni incomplete", {
+                        stem: q.stem,
+                        firstChoice
+                    });
+                    return false;
+                }
+            }
+            
+            // Accetta solo mcq e true_false
+            if (qType !== 'mcq' && qType !== 'true_false') {
+                console.warn("❌ Domanda scartata (tipo non supportato):", qType, q.stem);
+                return false;
+            }
+            
+            return true;
+        });
+        
+        if (parsedJson.quizBank.length < originalCount) {
+            console.warn(`⚠️ Filtrate ${originalCount - parsedJson.quizBank.length} domande MCQ non valide`);
+        }
+        
+        console.log("=== DEBUG: After filtering ===");
+        console.log("Valid questions:", parsedJson.quizBank.length);
         
         return {
             learningObjectives: parsedJson.learningObjectives,

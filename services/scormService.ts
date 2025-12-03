@@ -88,7 +88,41 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
  */
 const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
     const { videoData, learningObjectives, quizBank, settings } = data;
-    const finalQuiz = quizBank.slice(0, settings.numQuestions);
+    
+    // Filtra domande non supportate o malformate
+    const validQuizBank = quizBank.filter((q) => {
+        // Normalizza il tipo (case insensitive)
+        const qType = (q.type || "").toLowerCase();
+        
+        // Scarta domande short_answer (non supportate nel quiz interattivo)
+        if (qType === "short_answer") {
+            console.warn("Scartata domanda short_answer (non supportata):", q.stem);
+            return false;
+        }
+        
+        // Verifica che MCQ abbia choices valide
+        if (qType === "mcq") {
+            if (!q.choices || !Array.isArray(q.choices) || q.choices.length === 0 || !q.choices[0]) {
+                console.warn("Scartata domanda MCQ senza choices:", q.stem);
+                return false;
+            }
+            const c = q.choices[0];
+            if (!c.A || !c.B || !c.C || !c.D) {
+                console.warn("Scartata domanda MCQ con choices incomplete:", q.stem);
+                return false;
+            }
+        }
+        
+        // Accetta solo mcq e true_false
+        if (qType !== "mcq" && qType !== "true_false") {
+            console.warn("Scartata domanda con tipo non supportato:", qType, q.stem);
+            return false;
+        }
+        
+        return true;
+    });
+    
+    const finalQuiz = validQuizBank.slice(0, settings.numQuestions);
 
     return `
 <!DOCTYPE html>
@@ -479,16 +513,27 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       function renderQuizPage() {
           const q = courseData.quiz[currentQuestionIndex];
           let choicesHTML = '';
-          if (q.type === 'mcq') {
-            choicesHTML = Object.entries(q.choices[0]).map(([key, value]) => \`
-              <div onclick="selectAnswer('\${key}')" class="quiz-choice border-2 border-gray-300 p-4 rounded-md cursor-pointer" data-choice="\${key}">
-                <strong>\${key}.</strong> \${value}
-              </div>
-            \`).join('');
-          } else if (q.type === 'true_false') {
+          const qType = (q.type || "").toLowerCase();
+          
+          if (qType === 'mcq') {
+            // Verifica che choices esista e sia valido
+            if (q.choices && q.choices[0] && q.choices[0].A) {
+              choicesHTML = Object.entries(q.choices[0]).map(([key, value]) => \`
+                <div onclick="selectAnswer('\${key}')" class="quiz-choice border-2 border-gray-300 p-4 rounded-md cursor-pointer" data-choice="\${key}">
+                  <strong>\${key}.</strong> \${value}
+                </div>
+              \`).join('');
+            } else {
+              // Fallback: mostra errore
+              choicesHTML = '<div class="p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md">Errore: opzioni non disponibili per questa domanda.</div>';
+            }
+          } else if (qType === 'true_false') {
             choicesHTML = ['True', 'False'].map(val => \`
               <div onclick="selectAnswer('\${val}')" class="quiz-choice border-2 border-gray-300 p-4 rounded-md cursor-pointer" data-choice="\${val}">\${val}</div>
             \`).join('');
+          } else {
+            // Tipo di domanda non riconosciuto
+            choicesHTML = '<div class="p-4 bg-gray-100 border border-gray-300 text-gray-600 rounded-md">Tipo di domanda: ' + q.type + '</div>';
           }
 
           app.innerHTML = \`

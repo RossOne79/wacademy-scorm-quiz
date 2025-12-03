@@ -10,6 +10,58 @@ import { SessionProvider, useSession } from './contexts/SessionContext';
 import ThemeCustomizer from './components/ThemeCustomizer';
 import ProgressBar from './components/ProgressBar';
 
+// Session Restore Modal Component
+const SessionRestoreModal: React.FC<{
+  isOpen: boolean;
+  onRestore: () => void;
+  onNewSession: () => void;
+}> = ({ isOpen, onRestore, onNewSession }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      
+      {/* Modal */}
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all animate-fade-in">
+        {/* Icon */}
+        <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+        
+        {/* Title */}
+        <h2 className="text-xl font-bold text-center text-gray-900 dark:text-white mb-2">
+          Sessione Precedente Trovata
+        </h2>
+        
+        {/* Description */}
+        <p className="text-center text-gray-600 dark:text-gray-400 mb-6">
+          È stata trovata una sessione di lavoro salvata. Vuoi continuare da dove avevi interrotto?
+        </p>
+        
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={onNewSession}
+            className="flex-1 px-4 py-3 rounded-xl border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            Nuova Sessione
+          </button>
+          <button
+            onClick={onRestore}
+            className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+          >
+            Ripristina
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AppContent: React.FC = () => {
   const { showToast } = useToast();
   const { saveSession, loadSession, clearSession, saveQuizHistory, getQuizHistory } = useSession();
@@ -30,6 +82,8 @@ const AppContent: React.FC = () => {
   const [isThemeCustomizerOpen, setIsThemeCustomizerOpen] = useState(false);
   const [showSessionMenu, setShowSessionMenu] = useState(false);
   const [showHistoryMenu, setShowHistoryMenu] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [pendingSession, setPendingSession] = useState<any>(null);
 
   // Auto-save session on state changes
   useEffect(() => {
@@ -49,18 +103,30 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     const session = loadSession();
     if (session && session.videoData) {
-      const shouldRestore = window.confirm('Trovata una sessione salvata. Vuoi ripristinarla?');
-      if (shouldRestore) {
-        setCurrentStep(session.currentStep);
-        setVideoData(session.videoData);
-        setTranscript(session.transcript);
-        setLearningObjectives(session.learningObjectives);
-        setQuizBank(session.quizBank);
-        setScormSettings(session.scormSettings);
-        showToast('Sessione ripristinata con successo!', 'success');
-      }
+      setPendingSession(session);
+      setShowRestoreModal(true);
     }
   }, []);
+
+  const handleRestoreSession = () => {
+    if (pendingSession) {
+      setCurrentStep(pendingSession.currentStep);
+      setVideoData(pendingSession.videoData);
+      setTranscript(pendingSession.transcript);
+      setLearningObjectives(pendingSession.learningObjectives);
+      setQuizBank(pendingSession.quizBank);
+      setScormSettings(pendingSession.scormSettings);
+      showToast('Sessione ripristinata con successo!', 'success');
+    }
+    setShowRestoreModal(false);
+    setPendingSession(null);
+  };
+
+  const handleNewSession = () => {
+    clearSession();
+    setShowRestoreModal(false);
+    setPendingSession(null);
+  };
 
   const handleVideoProcessed = useCallback((data: VideoData, transcriptContent: string | null) => {
     setVideoData(data);
@@ -223,6 +289,13 @@ const AppContent: React.FC = () => {
       <ThemeCustomizer 
         isOpen={isThemeCustomizerOpen} 
         onClose={() => setIsThemeCustomizerOpen(false)} 
+      />
+
+      {/* Session Restore Modal */}
+      <SessionRestoreModal
+        isOpen={showRestoreModal}
+        onRestore={handleRestoreSession}
+        onNewSession={handleNewSession}
       />
 
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
