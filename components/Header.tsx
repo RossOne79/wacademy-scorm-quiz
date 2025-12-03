@@ -14,17 +14,29 @@ export const Header: React.FC = () => {
 
   useEffect(() => {
     const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    setIsDarkMode(localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && prefersDark));
+    try {
+      const storedTheme = localStorage.getItem('theme');
+      const isDark = storedTheme === 'dark' || (!storedTheme && prefersDark);
+      setIsDarkMode(isDark);
+    } catch (error) {
+      console.warn('localStorage non disponibile, uso solo prefers-color-scheme per il tema:', error);
+      setIsDarkMode(prefersDark);
+    }
     setHasKey(hasApiKey());
   }, []);
 
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+    }
+
+    // Prova a persistere la preferenza solo se lo storage è disponibile
+    try {
+      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    } catch (error) {
+      console.warn('localStorage non disponibile, il tema non verrà persistito:', error);
     }
   }, [isDarkMode]);
 

@@ -31,6 +31,32 @@ const SESSION_STORAGE_KEY = 'video-scorm-session';
 const SESSIONS_LIST_KEY = 'video-scorm-sessions-list';
 const QUIZ_HISTORY_KEY = 'video-scorm-quiz-history';
 
+// Helper sicuri per l'accesso a localStorage in contesti dove lo storage può essere bloccato
+const safeSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('localStorage non disponibile, dati non persi ma non persistiti:', error);
+  }
+};
+
+const safeGetItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn('localStorage non disponibile, impossibile leggere i dati:', error);
+    return null;
+  }
+};
+
+const safeRemoveItem = (key: string) => {
+  try {
+    localStorage.removeItem(key);
+  } catch (error) {
+    console.warn('localStorage non disponibile, impossibile rimuovere i dati:', error);
+  }
+};
+
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
 
 export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -40,17 +66,17 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
       timestamp: Date.now(),
     };
     
-    // Save current session
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+    // Save current session (se lo storage è disponibile)
+    safeSetItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
     
     // Add to sessions list (keep last 10)
     const sessions = getSavedSessions();
     const updatedSessions = [sessionData, ...sessions.slice(0, 9)];
-    localStorage.setItem(SESSIONS_LIST_KEY, JSON.stringify(updatedSessions));
+    safeSetItem(SESSIONS_LIST_KEY, JSON.stringify(updatedSessions));
   };
 
   const loadSession = (): SessionData | null => {
-    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+    const stored = safeGetItem(SESSION_STORAGE_KEY);
     if (!stored) return null;
     
     try {
@@ -61,11 +87,11 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const clearSession = () => {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+    safeRemoveItem(SESSION_STORAGE_KEY);
   };
 
   const getSavedSessions = (): SessionData[] => {
-    const stored = localStorage.getItem(SESSIONS_LIST_KEY);
+    const stored = safeGetItem(SESSIONS_LIST_KEY);
     if (!stored) return [];
     
     try {
@@ -85,11 +111,11 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     // Keep last 20 generations
     const updatedHistory = [newEntry, ...history.slice(0, 19)];
-    localStorage.setItem(QUIZ_HISTORY_KEY, JSON.stringify(updatedHistory));
+    safeSetItem(QUIZ_HISTORY_KEY, JSON.stringify(updatedHistory));
   };
 
   const getQuizHistory = (): QuizHistory[] => {
-    const stored = localStorage.getItem(QUIZ_HISTORY_KEY);
+    const stored = safeGetItem(QUIZ_HISTORY_KEY);
     if (!stored) return [];
     
     try {
@@ -100,7 +126,7 @@ export const SessionProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   const clearQuizHistory = () => {
-    localStorage.removeItem(QUIZ_HISTORY_KEY);
+    safeRemoveItem(QUIZ_HISTORY_KEY);
   };
 
   return (

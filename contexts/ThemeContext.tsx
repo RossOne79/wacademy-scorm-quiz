@@ -39,16 +39,34 @@ const defaultTheme: ThemeConfig = {
 const THEME_STORAGE_KEY = 'video-scorm-theme';
 const PRESETS_STORAGE_KEY = 'video-scorm-theme-presets';
 
+// Helper sicuri per l'accesso a localStorage
+const safeGetItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn('localStorage non disponibile, impossibile leggere i dati tema:', error);
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    console.warn('localStorage non disponibile, impossibile salvare i dati tema:', error);
+  }
+};
+
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<ThemeConfig>(() => {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const stored = safeGetItem(THEME_STORAGE_KEY);
     return stored ? JSON.parse(stored) : defaultTheme;
   });
 
   const [presets, setPresets] = useState<ThemePreset[]>(() => {
-    const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+    const stored = safeGetItem(PRESETS_STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
   });
 
@@ -81,8 +99,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
     root.style.setProperty('--theme-font-scale', scaleMap[theme.fontScale]);
 
-    // Save to localStorage
-    localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(theme));
+    // Save to localStorage (se disponibile)
+    safeSetItem(THEME_STORAGE_KEY, JSON.stringify(theme));
   }, [theme]);
 
   const updateTheme = (updates: Partial<ThemeConfig>) => {
@@ -97,7 +115,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const newPreset: ThemePreset = { name, config: { ...theme } };
     const updatedPresets = [...presets.filter(p => p.name !== name), newPreset];
     setPresets(updatedPresets);
-    localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(updatedPresets));
+    safeSetItem(PRESETS_STORAGE_KEY, JSON.stringify(updatedPresets));
   };
 
   const loadPreset = (name: string) => {
@@ -110,7 +128,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const deletePreset = (name: string) => {
     const updatedPresets = presets.filter(p => p.name !== name);
     setPresets(updatedPresets);
-    localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(updatedPresets));
+    safeSetItem(PRESETS_STORAGE_KEY, JSON.stringify(updatedPresets));
   };
 
   return (

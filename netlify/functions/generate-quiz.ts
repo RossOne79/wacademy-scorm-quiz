@@ -115,8 +115,8 @@ export const handler: Handler = async (event) => {
 
         Il tuo compito è analizzare la trascrizione fornita e:
         1.  Creare 5-8 obiettivi di apprendimento chiari, concisi e misurabili, basati sul contenuto della trascrizione.
-        2.  Generare una banca di 20 domande del quiz basate ESCLUSIVAMENTE sulla trascrizione.
-        3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: 50% facile (10), 35% medio (7), 15% difficile (3).
+        2.  Generare una banca di 10 domande del quiz basate ESCLUSIVAMENTE sulla trascrizione.
+        3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: circa 50% facile (5), 30% medio (3), 20% difficile (2).
         4.  Le domande devono coprire un mix di livelli cognitivi: rievocazione, comprensione e applicazione.
         5.  Per ogni domanda, identifica i timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi).
         
@@ -143,8 +143,8 @@ export const handler: Handler = async (event) => {
 
         Basandoti sul contenuto dedotto del video, il tuo compito è:
         1.  Creare 5-8 obiettivi di apprendimento chiari, concisi e misurabili, appropriati per questo video.
-        2.  Generare una banca di 20 domande del quiz basate ESCLUSIVAMENTE sul contenuto dedotto.
-        3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: 50% facile (10), 35% medio (7), 15% difficile (3).
+        2.  Generare una banca di 10 domande del quiz basate ESCLUSIVAMENTE sul contenuto dedotto.
+        3.  Il quiz deve rispettare la seguente distribuzione di difficoltà: circa 50% facile (5), 30% medio (3), 20% difficile (2).
         4.  Le domande devono coprire un mix di livelli cognitivi: rievocazione, comprensione e applicazione.
         5.  Per ogni domanda, inventa dei timestamp di origine plausibili all'interno della durata del video (da 0 a ${Math.round(videoData.duration)} secondi).
         
