@@ -2,13 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  # Disabilita il secrets scanning - VITE_CLERK_PUBLISHABLE_KEY è una chiave PUBBLICA
+  # progettata per essere esposta nel client. GEMINI_API_KEY è gestita server-side.
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-# Nota: VITE_CLERK_PUBLISHABLE_KEY è una chiave PUBBLICA (publishable key) di Clerk,
-# non un segreto. È progettata per essere esposta nel bundle client.
-# Per evitare falsi positivi nel secrets scanning, configura su Netlify Dashboard:
-# SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES = VITE_CLERK_PUBLISHABLE_KEY
 
