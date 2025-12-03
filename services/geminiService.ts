@@ -3,7 +3,7 @@ import { QuizQuestion, VideoData } from '../types';
 // La logica di generazione del quiz è ora gestita dalla Netlify Function
 // Questo file ora fa solo da client per chiamare la function
 
-export async function generateQuizAndObjectives(videoData: VideoData, transcript: string | null): Promise<{ learningObjectives: string[], quizBank: QuizQuestion[] } | null> {
+export async function generateQuizAndObjectives(videoData: VideoData, transcript: string | null, userApiKey: string): Promise<{ learningObjectives: string[], quizBank: QuizQuestion[] } | null> {
     try {
         // Prepara i dati serializzabili per la Netlify Function
         // Il File object non può essere serializzato direttamente, quindi estraiamo solo le proprietà necessarie
@@ -35,12 +35,24 @@ export async function generateQuizAndObjectives(videoData: VideoData, transcript
             body: JSON.stringify({
                 videoData: serializableVideoData,
                 transcript,
+                userApiKey,
             }),
         });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            const errorMessage = errorData.error || errorData.message || `HTTP error! status: ${response.status}`;
+            
+            // Messaggi di errore più user-friendly
+            if (response.status === 400 && errorMessage.includes('API key')) {
+                throw new Error('Chiave API non valida. Controlla la chiave nell\'header.');
+            } else if (response.status === 401 || response.status === 403) {
+                throw new Error('Chiave API non autorizzata. Verifica la tua chiave Gemini.');
+            } else if (response.status === 429) {
+                throw new Error('Quota API esaurita. Riprova più tardi.');
+            }
+            
+            throw new Error(errorMessage);
         }
 
         const result = await response.json();

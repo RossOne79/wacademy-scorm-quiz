@@ -76,20 +76,10 @@ export const handler: Handler = async (event) => {
         };
     }
 
-    // Verifica che la chiave API sia configurata
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        console.error('GEMINI_API_KEY not configured');
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Gemini API key is not configured' })
-        };
-    }
-
     try {
         // Parse del body della richiesta
         const body = JSON.parse(event.body || '{}');
-        const { videoData, transcript } = body;
+        const { videoData, transcript, userApiKey } = body;
 
         if (!videoData) {
             return {
@@ -98,8 +88,17 @@ export const handler: Handler = async (event) => {
             };
         }
 
-        // Inizializza GoogleGenAI con la chiave dal server
-        const ai = new GoogleGenAI({ apiKey });
+        // Verifica che la chiave API dell'utente sia presente
+        if (!userApiKey || typeof userApiKey !== 'string' || userApiKey.trim().length === 0) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'API key is required. Please provide your Gemini API key.' })
+            };
+        }
+
+        // Inizializza GoogleGenAI con la chiave dell'utente
+        // IMPORTANTE: Non loggare mai la chiave API
+        const ai = new GoogleGenAI({ apiKey: userApiKey.trim() });
 
         // Costruisci il prompt
         let prompt: string;
@@ -238,12 +237,27 @@ export const handler: Handler = async (event) => {
         };
 
     } catch (error) {
-        console.error('Error generating quiz:', error);
+        // IMPORTANTE: Non loggare mai la chiave API nei messaggi di errore
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Log dell'errore senza includere la chiave
+        console.error('Error generating quiz:', errorMessage);
+        
+        // Messaggi di errore user-friendly
+        let userMessage = 'Failed to generate quiz';
+        if (errorMessage.includes('API key') || errorMessage.includes('authentication') || errorMessage.includes('401') || errorMessage.includes('403')) {
+            userMessage = 'Chiave API non valida o non autorizzata. Verifica la tua chiave Gemini.';
+        } else if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+            userMessage = 'Quota API esaurita. Riprova più tardi.';
+        } else if (errorMessage.includes('rate limit')) {
+            userMessage = 'Troppe richieste. Riprova tra qualche minuto.';
+        }
+        
         return {
             statusCode: 500,
             body: JSON.stringify({ 
-                error: 'Failed to generate quiz',
-                message: error instanceof Error ? error.message : 'Unknown error'
+                error: userMessage,
+                message: errorMessage
             })
         };
     }

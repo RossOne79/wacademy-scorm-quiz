@@ -3,6 +3,8 @@ import { VideoData, QuizQuestion, Difficulty, QuestionType } from '../types';
 import { generateQuizAndObjectives } from '../services/geminiService';
 import { ArrowLeftIcon } from './icons';
 import ThemedButton from './ThemedButton';
+import { getApiKey } from '../services/geminiKeyStorage';
+import { useToast } from '../contexts/ToastContext';
 
 interface GenerateStepProps {
   videoData: VideoData;
@@ -12,6 +14,7 @@ interface GenerateStepProps {
 }
 
 const GenerateStep: React.FC<GenerateStepProps> = ({ videoData, transcript, onQuizGenerated, onBack }) => {
+  const { showToast } = useToast();
   const [status, setStatus] = useState('generating_ai');
   const [error, setError] = useState<string | null>(null);
   const [objectives, setObjectives] = useState<string[]>([]);
@@ -24,10 +27,19 @@ const GenerateStep: React.FC<GenerateStepProps> = ({ videoData, transcript, onQu
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const runGeneration = useCallback(async () => {
+    // Controlla se la chiave API è presente
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setError("Inserisci prima la tua chiave API Gemini nell'header per generare il quiz.");
+      setStatus('error');
+      showToast("Inserisci prima la tua chiave Gemini nell'header", 'error');
+      return;
+    }
+
     setStatus('generating_ai');
     setError(null);
     try {
-      const result = await generateQuizAndObjectives(videoData, transcript);
+      const result = await generateQuizAndObjectives(videoData, transcript, apiKey);
       if (result) {
         setObjectives(result.learningObjectives);
         setQuestions(result.quizBank);
@@ -39,10 +51,12 @@ const GenerateStep: React.FC<GenerateStepProps> = ({ videoData, transcript, onQu
       }
     } catch (err) {
       console.error(err);
-      setError("Si è verificato un errore durante la generazione AI. Riprova.");
+      const errorMessage = err instanceof Error ? err.message : "Si è verificato un errore durante la generazione AI.";
+      setError(errorMessage);
       setStatus('error');
+      showToast(errorMessage, 'error');
     }
-  }, [videoData, transcript]);
+  }, [videoData, transcript, showToast]);
 
   useEffect(() => {
     runGeneration();
