@@ -64,6 +64,9 @@ This application uses [Clerk](https://clerk.com/) for authentication. All featur
 - **User Management**: Click the user button in the header to manage your account or sign out
 - **Quickstart Guide**: See [Clerk React Quickstart](https://clerk.com/docs/quickstarts/react) for detailed setup instructions
 
+**Note for Netlify Deploy**: `VITE_CLERK_PUBLISHABLE_KEY` is a **public key** (not a secret) and is designed to be exposed in the client bundle. If Netlify's secrets scanner flags it, configure Netlify Dashboard → Environment Variables:
+- Add `SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES` with value `VITE_CLERK_PUBLISHABLE_KEY`
+
 ## Workflow
 
 1. **Upload Video**: Import your video content (MP4 format)
