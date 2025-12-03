@@ -9,6 +9,7 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 import { SessionProvider, useSession } from './contexts/SessionContext';
 import ThemeCustomizer from './components/ThemeCustomizer';
 import ProgressBar from './components/ProgressBar';
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/clerk-react';
 
 // Session Restore Modal Component
 const SessionRestoreModal: React.FC<{
@@ -62,7 +63,7 @@ const SessionRestoreModal: React.FC<{
   );
 };
 
-const AppContent: React.FC = () => {
+const MainAppContent: React.FC = () => {
   const { showToast } = useToast();
   const { saveSession, loadSession, clearSession, saveQuizHistory, getQuizHistory } = useSession();
   const [currentStep, setCurrentStep] = useState<Step>(Step.Upload);
@@ -312,7 +313,37 @@ const App: React.FC = () => {
     <ThemeProvider>
       <ToastProvider>
         <SessionProvider>
-          <AppContent />
+          <SignedOut>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+              <div className="max-w-md w-full mx-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
+                  <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                      Video<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
+                    </h1>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Accedi per iniziare a creare pacchetti SCORM dai tuoi video
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    <SignInButton mode="modal">
+                      <button className="w-full px-6 py-3 bg-primary-600 text-white font-semibold rounded-xl hover:bg-primary-700 transition-colors shadow-lg">
+                        Accedi
+                      </button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <button className="w-full px-6 py-3 border-2 border-primary-600 text-primary-600 dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                        Registrati
+                      </button>
+                    </SignUpButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SignedOut>
+          <SignedIn>
+            <MainAppContent />
+          </SignedIn>
         </SessionProvider>
       </ToastProvider>
     </ThemeProvider>

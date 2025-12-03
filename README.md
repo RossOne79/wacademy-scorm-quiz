@@ -37,7 +37,17 @@ Automated SCORM package generation from video content with AI-powered interactiv
    npm install
    ```
 
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+2. Set environment variables in `.env.local`:
+   - `GEMINI_API_KEY`: Your Gemini API key
+   - `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk Publishable Key (get it from [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys))
+   
+   Example `.env.local`:
+   ```bash
+   GEMINI_API_KEY=your_gemini_api_key_here
+   VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+   ```
+   
+   **Important:** Never commit `.env.local` or any real API keys to version control.
 
 3. Run the app:
    ```bash
@@ -45,6 +55,14 @@ Automated SCORM package generation from video content with AI-powered interactiv
    ```
 
 4. Open http://localhost:5173 in your browser
+
+### Authentication with Clerk
+
+This application uses [Clerk](https://clerk.com/) for authentication. All features require a signed-in user.
+
+- **Sign In/Sign Up**: Use the authentication buttons on the login screen
+- **User Management**: Click the user button in the header to manage your account or sign out
+- **Quickstart Guide**: See [Clerk React Quickstart](https://clerk.com/docs/quickstarts/react) for detailed setup instructions
 
 ## Workflow
 

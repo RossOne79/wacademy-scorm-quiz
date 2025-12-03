@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { SunIcon, MoonIcon, VideoCameraIcon } from './icons';
+import { UserButton } from '@clerk/clerk-react';
 
 export const Header: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -34,13 +35,16 @@ export const Header: React.FC = () => {
               Video<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
             </h1>
           </div>
-          <button
-            onClick={toggleDarkMode}
-            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            aria-label="Attiva/disattiva modalità scura"
-          >
-            {isDarkMode ? <SunIcon className="h-6 w-6" /> : <MoonIcon className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={toggleDarkMode}
+              className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              aria-label="Attiva/disattiva modalità scura"
+            >
+              {isDarkMode ? <SunIcon className="h-6 w-6" /> : <MoonIcon className="h-6 w-6" />}
+            </button>
+            <UserButton afterSignOutUrl="/" />
+          </div>
         </div>
       </div>
     </header>
