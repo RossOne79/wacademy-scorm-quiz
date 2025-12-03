@@ -9,7 +9,7 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 import { SessionProvider, useSession } from './contexts/SessionContext';
 import ThemeCustomizer from './components/ThemeCustomizer';
 import ProgressBar from './components/ProgressBar';
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, SignInButton, Waitlist } from '@clerk/clerk-react';
 
 // Session Restore Modal Component
 const SessionRestoreModal: React.FC<{
@@ -331,11 +331,25 @@ const App: React.FC = () => {
                         Accedi
                       </button>
                     </SignInButton>
-                    <SignUpButton mode="modal">
-                      <button className="w-full px-6 py-3 border-2 border-primary-600 text-primary-600 dark:text-primary-400 font-semibold rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
-                        Registrati
-                      </button>
-                    </SignUpButton>
+                    
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                          oppure
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
+                        Non hai ancora accesso?<br />
+                        Iscriviti alla waitlist:
+                      </p>
+                      <Waitlist />
+                    </div>
                   </div>
                 </div>
               </div>
