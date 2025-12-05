@@ -304,6 +304,11 @@ const MainAppContent: React.FC = () => {
           {renderStep()}
         </div>
       </main>
+      
+      {/* Footer */}
+      <footer className="mt-auto py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        made by agians
+      </footer>
     </div>
   );
 };
@@ -314,15 +319,15 @@ const App: React.FC = () => {
       <ToastProvider>
         <SessionProvider>
           <SignedOut>
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="max-w-md w-full mx-4">
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 text-center">
                   <div className="mb-6">
                     <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                      Video<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
+                      Media<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
                     </h1>
                     <p className="text-gray-600 dark:text-gray-400">
-                      Accedi per iniziare a creare pacchetti SCORM dai tuoi video
+                      Accedi per iniziare a creare pacchetti SCORM dai tuoi media
                     </p>
                   </div>
                   <div className="flex flex-col gap-3">
@@ -353,6 +358,11 @@ const App: React.FC = () => {
                   </div>
                 </div>
               </div>
+              
+              {/* Footer */}
+              <footer className="mt-auto py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                made by agians
+              </footer>
             </div>
           </SignedOut>
           <SignedIn>

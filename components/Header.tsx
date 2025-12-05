@@ -80,7 +80,7 @@ export const Header: React.FC = () => {
           <div className="flex items-center space-x-3">
             <VideoCameraIcon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              Video<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
+              Media<span className="text-primary-600 dark:text-primary-400">→</span>Quiz SCORM
             </h1>
           </div>
           <div className="flex items-center gap-3">

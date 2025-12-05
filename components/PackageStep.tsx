@@ -105,8 +105,8 @@ const PackageStep: React.FC<PackageStepProps> = ({
                             <input id="showVideoControls" type="checkbox" checked={settings.showVideoControls} onChange={e => onSettingsChange({...settings, showVideoControls: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
                         </div>
                         <div className="ml-3 text-sm">
-                            <label htmlFor="showVideoControls" className="font-medium text-gray-700 dark:text-gray-300">Mostra controlli video nativi</label>
-                            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">Se disattivato, il video può essere controllato solo tramite il pulsante Play/Pausa (no seek avanti/indietro)</p>
+                            <label htmlFor="showVideoControls" className="font-medium text-gray-700 dark:text-gray-300">Mostra controlli media nativi</label>
+                            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">Se disattivato, il media può essere controllato solo tramite il pulsante Play/Pausa (no seek avanti/indietro)</p>
                         </div>
                     </div>
                 </div>
@@ -116,10 +116,10 @@ const PackageStep: React.FC<PackageStepProps> = ({
                     <div>
                         <h3 className="text-lg font-semibold">Anteprima del Corso</h3>
                         <div className="mt-4 flex items-start space-x-4">
-                            <img src={videoData.thumbnail} alt="Video thumbnail" className="w-24 h-16 object-cover rounded-md" />
+                            <img src={videoData.thumbnail} alt="Media thumbnail" className="w-24 h-16 object-cover rounded-md" />
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{settings.courseTitle}</h4>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Video di {Math.ceil(videoData.duration / 60)} min</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">Media di {Math.ceil(videoData.duration / 60)} min</p>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">{Math.min(settings.numQuestions, quizBank.length)} domande</p>
                             </div>
                         </div>

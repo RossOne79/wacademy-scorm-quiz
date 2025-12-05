@@ -156,7 +156,7 @@ const GenerateStep: React.FC<GenerateStepProps> = ({ videoData, transcript, onQu
         </button>
         <div className="text-center flex-grow">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Passo 2: Genera Quiz</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">L'IA sta creando i contenuti dal tuo video.</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">L'IA sta creando i contenuti dal tuo media.</p>
         </div>
         <div className="w-8"></div>
       </div>
@@ -164,7 +164,7 @@ const GenerateStep: React.FC<GenerateStepProps> = ({ videoData, transcript, onQu
       {status === 'generating_ai' && (
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
             <div className="w-16 h-16 border-4 border-primary-500 border-dashed rounded-full animate-spin"></div>
-            <p>{transcript ? 'Analisi della trascrizione e generazione dei contenuti...' : 'Analisi del contesto video e generazione dei contenuti...'}</p>
+            <p>{transcript ? 'Analisi della trascrizione e generazione dei contenuti...' : 'Analisi del contesto media e generazione dei contenuti...'}</p>
         </div>
       )}
 

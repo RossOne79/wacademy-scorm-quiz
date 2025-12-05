@@ -20,7 +20,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
         setFile(selectedFile);
         setError(null);
       } else {
-        setError('Seleziona un file video MP4 o WebM valido.');
+        setError('Seleziona un file media MP4 o WebM valido.');
         setFile(null);
       }
     }
@@ -74,7 +74,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
       
       onVideoProcessed({ file: videoFile, url, thumbnail, duration }, transcriptContent);
     } catch (err) {
-      setError('Impossibile elaborare il file video. Prova con un altro file.');
+      setError('Impossibile elaborare il file media. Prova con un altro file.');
       console.error(err);
       setIsProcessing(false);
     }
@@ -98,7 +98,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
             processVideo(file, null);
         }
     } else {
-        setError("Carica un file video per procedere.");
+        setError("Carica un file media per procedere.");
     }
   };
 
@@ -106,12 +106,12 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Passo 1: Fornisci Contenuti</h2>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">Carica un video e, opzionalmente, una trascrizione.</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">Carica un media e, opzionalmente, una trascrizione.</p>
       </div>
 
       <div className="space-y-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. Carica un file video (MP4/WebM)</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. Carica un file media (MP4/WebM)</label>
           <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
             <div className="space-y-1 text-center">
               <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -125,7 +125,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
               <p className="text-xs text-gray-500 dark:text-gray-500">MP4, WebM fino a 500MB</p>
             </div>
           </div>
-          {file && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Video Selezionato: {file.name}</p>}
+          {file && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Media Selezionato: {file.name}</p>}
         </div>
 
         <div>
@@ -146,7 +146,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
         </div>
 
         <div>
-            <label htmlFor="video-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Incolla un URL video (presto disponibile)</label>
+            <label htmlFor="video-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Incolla un URL media (presto disponibile)</label>
             <div className="mt-1 flex rounded-md shadow-sm">
                 <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 sm:text-sm">
                     <LinkIcon className="h-5 w-5"/>

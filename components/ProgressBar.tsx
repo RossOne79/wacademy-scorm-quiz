@@ -12,7 +12,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, onStepClick, can
   const { theme } = useTheme();
 
   const steps = [
-    { step: Step.Upload, label: 'Upload Video', icon: '📤' },
+    { step: Step.Upload, label: 'Upload Media', icon: '📤' },
     { step: Step.Generate, label: 'Genera Quiz', icon: '🤖' },
     { step: Step.Package, label: 'Pacchetto SCORM', icon: '📦' },
   ];
