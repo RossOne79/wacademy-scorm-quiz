@@ -7,6 +7,7 @@
   # VITE_CLERK_PUBLISHABLE_KEY è una chiave PUBBLICA di Clerk, progettata per il client
   # GEMINI_API_KEY è gestita server-side via Netlify Functions
   SECRETS_SCAN_ENABLED = "false"
+  NODE_VERSION = "20"
 
 [[redirects]]
   from = "/*"
