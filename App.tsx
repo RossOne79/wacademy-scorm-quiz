@@ -69,6 +69,7 @@ const MainAppContent: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<Step>(Step.Upload);
   const [videoData, setVideoData] = useState<VideoData | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [generateQuiz, setGenerateQuiz] = useState<boolean>(true); // Flag per generazione quiz opzionale
   const [learningObjectives, setLearningObjectives] = useState<string[]>([]);
   const [quizBank, setQuizBank] = useState<QuizQuestion[]>([]);
   const [scormSettings, setScormSettings] = useState<SCORMSettings>({
@@ -93,12 +94,13 @@ const MainAppContent: React.FC = () => {
         currentStep,
         videoData,
         transcript,
+        generateQuiz,
         learningObjectives,
         quizBank,
         scormSettings,
       });
     }
-  }, [currentStep, videoData, transcript, learningObjectives, quizBank, scormSettings]);
+  }, [currentStep, videoData, transcript, generateQuiz, learningObjectives, quizBank, scormSettings]);
 
   // Load session on mount
   useEffect(() => {
@@ -114,6 +116,7 @@ const MainAppContent: React.FC = () => {
       setCurrentStep(pendingSession.currentStep);
       setVideoData(pendingSession.videoData);
       setTranscript(pendingSession.transcript);
+      setGenerateQuiz(pendingSession.generateQuiz ?? true); // Default true se non presente
       setLearningObjectives(pendingSession.learningObjectives);
       setQuizBank(pendingSession.quizBank);
       setScormSettings(pendingSession.scormSettings);
@@ -129,11 +132,13 @@ const MainAppContent: React.FC = () => {
     setPendingSession(null);
   };
 
-  const handleVideoProcessed = useCallback((data: VideoData, transcriptContent: string | null) => {
+  const handleVideoProcessed = useCallback((data: VideoData, transcriptContent: string | null, shouldGenerateQuiz: boolean) => {
     setVideoData(data);
     setTranscript(transcriptContent);
+    setGenerateQuiz(shouldGenerateQuiz);
     setScormSettings(prev => ({ ...prev, courseTitle: data.file.name.replace(/\.[^/.]+$/, "") }));
-    setCurrentStep(Step.Generate);
+    // Se non si genera il quiz, salta direttamente al Package step
+    setCurrentStep(shouldGenerateQuiz ? Step.Generate : Step.Package);
   }, []);
 
   const handleQuizGenerated = useCallback((objectives: string[], questions: QuizQuestion[]) => {
@@ -161,6 +166,7 @@ const MainAppContent: React.FC = () => {
       setCurrentStep(Step.Upload);
       setVideoData(null);
       setTranscript(null);
+      setGenerateQuiz(true);
       setLearningObjectives([]);
       setQuizBank([]);
       setScormSettings({
@@ -194,14 +200,16 @@ const MainAppContent: React.FC = () => {
         if (!videoData) return null;
         return <GenerateStep videoData={videoData} transcript={transcript} onQuizGenerated={handleQuizGenerated} onBack={handleBack} />;
       case Step.Package:
-        if (!videoData || quizBank.length === 0) return null;
-        return <PackageStep 
+        // Permetti Package step se c'è videoData e (quiz è disabilitato OPPURE ci sono domande)
+        if (!videoData || (generateQuiz && quizBank.length === 0)) return null;
+        return <PackageStep
             videoData={videoData}
             learningObjectives={learningObjectives}
             quizBank={quizBank}
             settings={scormSettings}
             onSettingsChange={setScormSettings}
             onBack={handleBack}
+            generateQuiz={generateQuiz}
         />;
       default:
         return <UploadStep onVideoProcessed={handleVideoProcessed} />;

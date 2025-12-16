@@ -3,7 +3,7 @@ import { VideoData } from '../types';
 import { UploadIcon, LinkIcon } from './icons';
 
 interface UploadStepProps {
-  onVideoProcessed: (data: VideoData, transcript: string | null) => void;
+  onVideoProcessed: (data: VideoData, transcript: string | null, shouldGenerateQuiz: boolean) => void;
 }
 
 const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
@@ -12,6 +12,7 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [generateQuiz, setGenerateQuiz] = useState<boolean>(true);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -71,14 +72,14 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
       });
 
       const thumbnail = await thumbnailPromise;
-      
-      onVideoProcessed({ file: videoFile, url, thumbnail, duration }, transcriptContent);
+
+      onVideoProcessed({ file: videoFile, url, thumbnail, duration }, transcriptContent, generateQuiz);
     } catch (err) {
       setError('Impossibile elaborare il file media. Prova con un altro file.');
       console.error(err);
       setIsProcessing(false);
     }
-  }, [onVideoProcessed]);
+  }, [onVideoProcessed, generateQuiz]);
   
   const handleProceed = () => {
       if (file) {
@@ -134,6 +135,29 @@ const UploadStep: React.FC<UploadStepProps> = ({ onVideoProcessed }) => {
                 <input type="file" id="transcript-upload" name="transcript-upload" accept=".txt" onChange={handleTranscriptFileChange} className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 dark:file:bg-gray-700 dark:file:text-gray-200 dark:hover:file:bg-gray-600"/>
             </div>
             {transcriptFile && <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Trascrizione Selezionata: {transcriptFile.name}</p>}
+        </div>
+
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex items-center h-5">
+              <input
+                id="generate-quiz"
+                name="generate-quiz"
+                type="checkbox"
+                checked={generateQuiz}
+                onChange={(e) => setGenerateQuiz(e.target.checked)}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+            </div>
+            <div className="ml-3">
+              <label htmlFor="generate-quiz" className="font-medium text-gray-900 dark:text-white cursor-pointer">
+                Genera quiz con AI
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Se abilitato, verrà utilizzato Gemini per creare automaticamente un quiz interattivo basato sul contenuto del media. Richiede una chiave API Gemini.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="relative">

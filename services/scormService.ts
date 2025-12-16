@@ -7,6 +7,7 @@ interface ScormPackageData {
   learningObjectives: string[];
   quizBank: QuizQuestion[];
   settings: SCORMSettings;
+  generateQuiz?: boolean; // Flag per includere o meno il quiz nel pacchetto
 }
 
 // ---- SCORM File Templates ----
@@ -87,10 +88,10 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
  *   console.warn('messaggio', e) ❌
  */
 const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
-    const { videoData, learningObjectives, quizBank, settings } = data;
-    
-    // Filtra domande non supportate o malformate
-    const validQuizBank = quizBank.filter((q) => {
+    const { videoData, learningObjectives, quizBank, settings, generateQuiz = true } = data;
+
+    // Filtra domande non supportate o malformate (solo se generateQuiz è true)
+    const validQuizBank = generateQuiz ? quizBank.filter((q) => {
         // Normalizza il tipo (case insensitive)
         const qType = (q.type || "").toLowerCase();
         
@@ -120,9 +121,9 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         }
         
         return true;
-    });
-    
-    const finalQuiz = validQuizBank.slice(0, settings.numQuestions);
+    }) : [];
+
+    const finalQuiz = generateQuiz ? validQuizBank.slice(0, settings.numQuestions) : [];
 
     return `
 <!DOCTYPE html>
@@ -204,7 +205,8 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         objectives: ${JSON.stringify(learningObjectives)},
         quiz: ${JSON.stringify(finalQuiz)},
         settings: ${JSON.stringify(settings)},
-        duration: ${videoData.duration}
+        duration: ${videoData.duration},
+        generateQuiz: ${generateQuiz}
       };
       
       const app = document.getElementById('app');
@@ -216,8 +218,8 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       function render() {
         if (currentPage === 'start') renderStartPage();
         else if (currentPage === 'video') renderVideoPage();
-        else if (currentPage === 'quiz') renderQuizPage();
-        else if (currentPage === 'results') renderResultsPage();
+        else if (currentPage === 'quiz' && courseData.generateQuiz) renderQuizPage();
+        else if (currentPage === 'results' && courseData.generateQuiz) renderResultsPage();
       }
 
       function setLocation(page) {
@@ -230,15 +232,19 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       }
       
       function renderStartPage() {
+        const objectivesSection = courseData.objectives && courseData.objectives.length > 0 ? \`
+          <h2 class="text-xl font-semibold mb-2">Obiettivi di Apprendimento</h2>
+          <ul class="text-left list-disc list-inside mb-6">
+            \${courseData.objectives.map(o => \`<li>\${o}</li>\`).join('')}
+          </ul>
+        \` : '';
+
         app.innerHTML = \`
           <div class="bg-white p-8 rounded-lg shadow-lg text-center">
             <h1 class="text-3xl font-bold mb-2">\${courseData.title}</h1>
             <img src="${videoData.thumbnail}" alt="Course thumbnail" class="mx-auto my-4 rounded-md w-1/2"/>
             <p class="text-gray-600 mb-4">Durata: \${Math.ceil(courseData.duration/60)} minuti</p>
-            <h2 class="text-xl font-semibold mb-2">Obiettivi di Apprendimento</h2>
-            <ul class="text-left list-disc list-inside mb-6">
-              \${courseData.objectives.map(o => \`<li>\${o}</li>\`).join('')}
-            </ul>
+            \${objectivesSection}
             <button onclick="setLocation('video')" class="bg-blue-600 text-white px-8 py-3 rounded-md font-semibold hover:bg-blue-700">Inizia Corso</button>
           </div>
         \`;
@@ -257,6 +263,17 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
                 </div>
               </div>
               \`;
+
+        const quizButtonHTML = courseData.generateQuiz ? \`
+          <div class="flex justify-end">
+            <button id="quizBtn" onclick="startQuiz()" class="bg-gray-400 text-white px-8 py-3 rounded-md font-semibold cursor-not-allowed" disabled>Inizia Quiz</button>
+          </div>
+        \` : \`
+          <div class="flex justify-end">
+            <p id="completionMsg" class="text-gray-600 italic">Guarda il video per completare il corso</p>
+          </div>
+        \`;
+
         app.innerHTML = \`
           <div class="bg-white p-8 rounded-lg shadow-lg">
             <h1 class="text-3xl font-bold mb-4">\${courseData.title}</h1>
@@ -264,12 +281,10 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
               <video id="courseVideo" src="video.mp4" class="w-full rounded-md" playsinline \${controlsAttr}></video>
               \${customControlsHTML}
             </div>
-            <div class="flex justify-end">
-              <button id="quizBtn" onclick="startQuiz()" class="bg-gray-400 text-white px-8 py-3 rounded-md font-semibold cursor-not-allowed" disabled>Inizia Quiz</button>
-            </div>
+            \${quizButtonHTML}
           </div>
         \`;
-        
+
         // Initialize video player
         initVideoPlayer();
       }
@@ -279,10 +294,12 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         const playPauseBtn = document.getElementById("playPauseBtn");
         const playPauseText = document.getElementById("playPauseText");
         const quizBtn = document.getElementById("quizBtn");
+        const completionMsg = document.getElementById("completionMsg");
         const currentTimeSpan = document.getElementById("currentTime");
         const totalTimeSpan = document.getElementById("totalTime");
-        
-        if (!video || !quizBtn) return;
+
+        if (!video) return;
+        // quizBtn può essere null se generateQuiz è false
         
         const showControls = courseData.settings.showVideoControls !== false;
         
@@ -468,24 +485,38 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
             playPauseBtn.disabled = true;
             playPauseBtn.classList.add("opacity-50", "cursor-not-allowed");
           }
-          
-          // Abilita il pulsante quiz
-          quizBtn.disabled = false;
-          quizBtn.classList.remove("bg-gray-400", "cursor-not-allowed");
-          quizBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
-          
-          // Segna il corso come completato in SCORM
-          if (API) {
-            try {
-              if (courseData.settings.scormVersion === "1.2") {
-                API.LMSSetValue("cmi.core.lesson_status", "completed");
-                API.LMSCommit("");
-              } else {
-                API.SetValue("cmi.completion_status", "completed");
-                API.Commit("");
+
+          if (courseData.generateQuiz) {
+            // Abilita il pulsante quiz se presente
+            if (quizBtn) {
+              quizBtn.disabled = false;
+              quizBtn.classList.remove("bg-gray-400", "cursor-not-allowed");
+              quizBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
+            }
+          } else {
+            // Senza quiz: mostra messaggio di completamento
+            if (completionMsg) {
+              completionMsg.textContent = "Video completato! Il corso è terminato.";
+              completionMsg.classList.remove("text-gray-600");
+              completionMsg.classList.add("text-green-600", "font-semibold");
+            }
+
+            // Segna il corso come completato in SCORM (senza quiz)
+            if (API) {
+              try {
+                if (courseData.settings.scormVersion === "1.2") {
+                  API.LMSSetValue("cmi.core.lesson_status", "completed");
+                  API.LMSSetValue("cmi.core.score.raw", "100");
+                  API.LMSCommit("");
+                } else {
+                  API.SetValue("cmi.completion_status", "completed");
+                  API.SetValue("cmi.success_status", "passed");
+                  API.SetValue("cmi.score.scaled", "1");
+                  API.Commit("");
+                }
+              } catch (e) {
+                console.warn("Errore nell\\'aggiornamento dello stato SCORM:", e);
               }
-            } catch (e) {
-              console.warn("Errore nell\\'aggiornamento dello stato SCORM:", e);
             }
           }
         });
