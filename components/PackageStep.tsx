@@ -11,33 +11,34 @@ interface PackageStepProps {
   settings: SCORMSettings;
   onSettingsChange: (settings: SCORMSettings) => void;
   onBack: () => void;
+  generateQuiz?: boolean;
 }
 
-const PackageStep: React.FC<PackageStepProps> = ({ 
-  videoData, learningObjectives, quizBank, settings, onSettingsChange, onBack 
+const PackageStep: React.FC<PackageStepProps> = ({
+  videoData, learningObjectives, quizBank, settings, onSettingsChange, onBack, generateQuiz = true
 }) => {
     const [isExporting, setIsExporting] = useState(false);
 
     const handleExport = useCallback(async () => {
         setIsExporting(true);
         try {
-            await createScormPackage({ videoData, learningObjectives, quizBank, settings });
+            await createScormPackage({ videoData, learningObjectives, quizBank, settings, generateQuiz });
         } catch (error) {
             console.error("Failed to create SCORM package:", error);
             alert("Si è verificato un errore durante la creazione del pacchetto SCORM. Controlla la console per i dettagli.");
         } finally {
             setIsExporting(false);
         }
-    }, [videoData, learningObjectives, quizBank, settings]);
+    }, [videoData, learningObjectives, quizBank, settings, generateQuiz]);
 
     const handleTest = useCallback(async () => {
       try {
-          await testInBrowser({ videoData, learningObjectives, quizBank, settings });
+          await testInBrowser({ videoData, learningObjectives, quizBank, settings, generateQuiz });
       } catch (error) {
           console.error("Failed to test in browser:", error);
           alert("Si è verificato un errore durante l'apertura del test. Controlla la console per i dettagli.");
       }
-  }, [videoData, learningObjectives, quizBank, settings]);
+  }, [videoData, learningObjectives, quizBank, settings, generateQuiz]);
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700">
@@ -79,26 +80,30 @@ const PackageStep: React.FC<PackageStepProps> = ({
                         </fieldset>
                     </div>
 
-                    <div>
-                        <label htmlFor="numQuestions" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Numero di Domande</label>
-                        <select id="numQuestions" value={settings.numQuestions} onChange={e => onSettingsChange({...settings, numQuestions: parseInt(e.target.value, 10) as SCORMSettings['numQuestions']})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600">
-                            {[5, 10, 15, 20].map(num => <option key={num} value={num} disabled={num > quizBank.length}> {num > quizBank.length ? `${num} (non sufficienti)` : num} </option>)}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label htmlFor="passingScore" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Punteggio di Superamento (%)</label>
-                        <input type="number" id="passingScore" value={settings.passingScore} onChange={e => onSettingsChange({...settings, passingScore: parseInt(e.target.value, 10)})} min="0" max="100" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600" />
-                    </div>
-
-                    <div className="relative flex items-start">
-                        <div className="flex h-5 items-center">
-                            <input id="randomizeOrder" type="checkbox" checked={settings.randomizeOrder} onChange={e => onSettingsChange({...settings, randomizeOrder: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                    {generateQuiz && (
+                      <>
+                        <div>
+                            <label htmlFor="numQuestions" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Numero di Domande</label>
+                            <select id="numQuestions" value={settings.numQuestions} onChange={e => onSettingsChange({...settings, numQuestions: parseInt(e.target.value, 10) as SCORMSettings['numQuestions']})} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600">
+                                {[5, 10, 15, 20].map(num => <option key={num} value={num} disabled={num > quizBank.length}> {num > quizBank.length ? `${num} (non sufficienti)` : num} </option>)}
+                            </select>
                         </div>
-                        <div className="ml-3 text-sm">
-                            <label htmlFor="randomizeOrder" className="font-medium text-gray-700 dark:text-gray-300">Ordina domande in modo casuale</label>
+
+                        <div>
+                            <label htmlFor="passingScore" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Punteggio di Superamento (%)</label>
+                            <input type="number" id="passingScore" value={settings.passingScore} onChange={e => onSettingsChange({...settings, passingScore: parseInt(e.target.value, 10)})} min="0" max="100" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600" />
                         </div>
-                    </div>
+
+                        <div className="relative flex items-start">
+                            <div className="flex h-5 items-center">
+                                <input id="randomizeOrder" type="checkbox" checked={settings.randomizeOrder} onChange={e => onSettingsChange({...settings, randomizeOrder: e.target.checked})} className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
+                            </div>
+                            <div className="ml-3 text-sm">
+                                <label htmlFor="randomizeOrder" className="font-medium text-gray-700 dark:text-gray-300">Ordina domande in modo casuale</label>
+                            </div>
+                        </div>
+                      </>
+                    )}
 
                     <div className="relative flex items-start">
                         <div className="flex h-5 items-center">
@@ -120,7 +125,9 @@ const PackageStep: React.FC<PackageStepProps> = ({
                             <div>
                                 <h4 className="font-semibold text-gray-900 dark:text-white">{settings.courseTitle}</h4>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Media di {Math.ceil(videoData.duration / 60)} min</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">{Math.min(settings.numQuestions, quizBank.length)} domande</p>
+                                {generateQuiz && (
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">{Math.min(settings.numQuestions, quizBank.length)} domande</p>
+                                )}
                             </div>
                         </div>
                     </div>
