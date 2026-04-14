@@ -1,103 +1,207 @@
-<div align="center">
-</div>
+# 🎓 Wacademy - SCORM Quiz Generator
 
-# mediaToScorm - Media to SCORM Conversion Tool
+**Wacademy** è un'applicazione web potente e intuitiva che automatizza la generazione di quiz interattivi SCORM da contenuti video utilizzando l'intelligenza artificiale Google Gemini.
 
-Automated SCORM package generation from video content with AI-powered interactive quiz creation using Google Gemini.
+## ✨ Caratteristiche Principali
 
-## Core Features
+### 🤖 Generazione Automatica Quiz con AI
+- Analizza automaticamente i contenuti video
+- Genera domande a scelta multipla e vero/falso
+- Crea obiettivi di apprendimento
+- Classifica per difficoltà e livello cognitivo
+- Supporta trascrizioni video (italiano)
 
-### Theme Customization
-- **Custom Colors**: Configure primary colors with color picker or hex codes
-- **Button Styles**: Select from filled, outline, and gradient variants
-- **Border Radius**: Choose between sharp, medium, and pill-shaped corners
-- **Typography**: System, serif, or monospace fonts with configurable sizing
-- **Theme Presets**: Save and reuse custom theme configurations
+### 📝 Gestione Avanzata dei Quiz
+- **Selezione selettiva**: Scegli quali domande includere
+- **Drag-and-drop**: Riordina le domande per priorità
+- **Modifica inline**: Correggi testi e obiettivi al volo
+- **Filtri avanzati**: Per difficoltà (facile/media/difficile) e tipo
+- **Timestamp video**: Collega domande a segmenti specifici
 
-### Quiz Content Management
-- **Selective Question Inclusion**: Choose which questions to include or exclude
-- **Drag-and-Drop Reordering**: Arrange questions by priority and importance
-- **Inline Editing**: Modify question text and learning objectives directly
-- **Advanced Filtering**: Filter by difficulty level and question type
-- **Video Timestamp References**: Link questions to specific video segments
+### 📦 Export SCORM Completo
+- **SCORM 1.2**: Compatibilità massima con LMS legacy
+- **SCORM 2004 3rd Edition**: Standard moderno
+- **Configurazione**: Titolo, numero domande, punteggio minimo, tentativi
+- **Anteprima browser**: Testa il corso prima di scaricare
 
-### Productivity Features
-- **Progress Tracking**: Multi-step progress bar with section navigation
-- **Auto-Save**: Automatic session persistence
-- **Generation History**: Restore and revisit previous quiz versions
-- **Real-time Notifications**: Immediate feedback on all actions
+### 🎨 Tema Personalizzabile
+- **Colori**: Scegli il colore primario con picker esadecimale
+- **Stili bottoni**: Filled, outline, gradient
+- **Bordi**: Sharp, medium, pill
+- **Font**: System, serif, monospace
+- **Dimensioni**: Small, medium, large
+- **Salva preset**: Crea e riusa temi personalizzati
 
+### 💾 Persistenza Dati
+- **Auto-save**: Salva automaticamente il lavoro
+- **Cronologia sessioni**: Ripristina ultimi lavori
+- **Cronologia quiz**: Accedi alle generazioni precedenti
+- **Dark mode**: Supporto completo tema scuro
 
-## 🚀 Run Locally
+### 🔐 Autenticazione Sicura
+- **Clerk Integration**: Gestione utenti professionale
+- **Sign-up/Sign-in**: Registrazione e login intuitivi
+- **Profilo utente**: Gestione account integrata
+- **Session management**: Sessioni sicure e persistenti
 
-**Prerequisites:** Node.js
+---
 
-1. Install dependencies:
-   ```bash
-   npm install
+## 🚀 Deploy Netlify
+
+### **URL Live**
+🌐 **https://wacademy-scorm-quiz.netlify.app**
+
+### **Variabili d'Ambiente Netlify**
+```
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+```
+
+---
+
+## 🛠️ Setup Locale
+
+### **Prerequisiti**
+- Node.js v20+ (scarica da [nodejs.org](https://nodejs.org))
+- Git
+- Chiave API Gemini (gratis da [Google AI Studio](https://aistudio.google.com/app/apikey))
+- Chiave Clerk Publishable (da [Clerk Dashboard](https://dashboard.clerk.com))
+
+### **Installazione**
+
+```bash
+# Clone repository
+git clone https://github.com/RossOne79/wacademy-scorm-quiz.git
+cd wacademy-scorm-quiz
+
+# Installa dipendenze
+npm install
+
+# Configura variabili d'ambiente
+echo 'GEMINI_API_KEY=YOUR_KEY' > .env.local
+echo 'VITE_CLERK_PUBLISHABLE_KEY=YOUR_KEY' >> .env.local
+
+# Avvia dev server
+npm run dev
+# Accedi a http://localhost:5173
+```
+
+---
+
+## 📋 Stack Tecnologico
+
+| Categoria | Tecnologia |
+|-----------|-----------|
+| **Frontend** | React 19 + TypeScript 5.8 |
+| **Build** | Vite 6.2 |
+| **Styling** | Tailwind CSS 3 |
+| **AI/APIs** | Google Gemini 2.5-flash, Clerk |
+| **Packaging** | JSZip (SCORM) |
+| **Hosting** | Netlify |
+
+---
+
+## 📁 Struttura Cartelle
+
+```
+wacademy/
+├── components/              # Componenti React
+│   ├── UploadStep.tsx       # Caricamento video
+│   ├── GenerateStep.tsx     # Generazione quiz
+│   ├── PackageStep.tsx      # Export SCORM
+│   ├── Header.tsx           # Barra superiore
+│   ├── ProgressBar.tsx      # Progress indicator
+│   └── ...
+├── contexts/                # React Contexts
+│   ├── SessionContext.tsx
+│   ├── ThemeContext.tsx
+│   └── ToastContext.tsx
+├── services/                # Business logic
+│   ├── geminiService.ts
+│   ├── geminiKeyStorage.ts
+│   └── scormService.ts
+├── netlify/functions/       # Serverless (opzionale)
+├── docs/                    # Documentazione
+├── App.tsx
+├── index.tsx
+└── package.json
+```
+
+---
+
+## 🔄 Workflow 3-Step
+
+### **Step 1: Upload Media**
+- Carica video (MP4/WebM)
+- Allega trascrizione (facoltativo)
+- Scegli di generare quiz con AI
+
+### **Step 2: Genera Quiz**
+- AI crea 20 domande + obiettivi
+- Seleziona domande da includere
+- Modifica e riordina con drag-drop
+- Filtra per difficoltà
+
+### **Step 3: Pacchetto SCORM**
+- Configura impostazioni corso
+- Scegli SCORM version (1.2 o 2004)
+- Esporta file .zip pronto per LMS
+
+---
+
+## 🔐 Configurazione API
+
+### **Google Gemini** (BYOK)
+1. Ottieni chiave da [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Incolla nel bottone lock/key nell'app
+3. Salva in localStorage (solo nel tuo browser)
+
+### **Clerk Authentication**
+1. Crea app su [Clerk.com](https://clerk.com)
+2. Copia Publishable Key
+3. Configura in `.env.local`:
+   ```
+   VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
    ```
 
-2. Set environment variables in `.env.local`:
-   - `GEMINI_API_KEY`: Your Gemini API key
-   - `VITE_CLERK_PUBLISHABLE_KEY`: Your Clerk Publishable Key (get it from [Clerk Dashboard](https://dashboard.clerk.com/last-active?path=api-keys))
-   
-   Example `.env.local`:
-   ```bash
-   GEMINI_API_KEY=your_gemini_api_key_here
-   VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
-   ```
-   
-   **Important:** Never commit `.env.local` or any real API keys to version control.
+---
 
-3. Run the app:
-   ```bash
-   npm run dev
-   ```
+## 🧪 Build & Deploy
 
-4. Open http://localhost:5173 in your browser
+```bash
+# Development
+npm run dev
 
-### Authentication with Clerk
+# Production build
+npm run build
 
-This application uses [Clerk](https://clerk.com/) for authentication. All features require a signed-in user.
+# Preview build
+npm run preview
+```
 
-- **Sign In/Sign Up**: Use the authentication buttons on the login screen
-- **User Management**: Click the user button in the header to manage your account or sign out
-- **Quickstart Guide**: See [Clerk React Quickstart](https://clerk.com/docs/quickstarts/react) for detailed setup instructions
+---
 
-**Note for Netlify Deploy**: `VITE_CLERK_PUBLISHABLE_KEY` is a **public key** (not a secret) and is designed to be exposed in the client bundle. If Netlify's secrets scanner flags it, configure Netlify Dashboard → Environment Variables:
-- Add `SECRETS_SCAN_SMART_DETECTION_OMIT_VALUES` with value `VITE_CLERK_PUBLISHABLE_KEY`
+## 📚 Documentazione
 
-## Workflow
+- **[SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)** - Guida installazione dettagliata
+- **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Deploy su Netlify
+- **[USER_GUIDE.md](./docs/USER_GUIDE.md)** - Manuale utente
 
-1. **Upload Video**: Import your video content (MP4 format)
-2. **Generate Quiz**: AI analyzes video content and generates questions
-   - Review and select relevant questions
-   - Reorder questions by priority
-   - Edit question text and objectives as needed
-3. **Export SCORM**: Configure and generate SCORM package for LMS deployment
+---
 
-## Technology Stack
+## 🤝 Support
 
-- **React 19** + TypeScript for robust UI development
-- **Vite** for optimized build performance
-- **Tailwind CSS** for responsive styling
-- **Google Gemini API** for AI-powered content generation
-- **SCORM 1.2/2004** for LMS compatibility
+- 📝 Issues: [GitHub Issues](https://github.com/RossOne79/wacademy-scorm-quiz/issues)
+- 💬 Discussioni: [GitHub Discussions](https://github.com/RossOne79/wacademy-scorm-quiz/discussions)
 
-## Documentation
+---
 
-- [`docs/piano-personalizzazione-ux.md`](docs/piano-personalizzazione-ux.md) - UX customization planning
-- [`docs/implementazione-completata.md`](docs/implementazione-completata.md) - Technical implementation details
-- [`docs/guida-rapida-nuove-funzionalita.md`](docs/guida-rapida-nuove-funzionalita.md) - User guide
+## 📄 Licenza
 
-## Features
+MIT License © 2026 Wacademy
 
-- ✅ Automatic quiz generation from video content
-- ✅ Audio transcription support
-- ✅ Multiple question types (multiple-choice, true/false, short-answer)
-- ✅ Difficulty and cognitive level classification
-- ✅ SCORM 1.2 and 2004 export
-- ✅ Comprehensive theme customization
+---
+
+**Trasformiamo video in corsi interattivi SCORM con IA! 🚀**
 - ✅ Fine-grained content control
 - ✅ Auto-save and generation history
 - ✅ Dark mode support
