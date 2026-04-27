@@ -36,10 +36,17 @@ const buildPackageMetadata = (data: ScormPackageData): ScormPackageMetadata => {
     };
 };
 
+const getPackagedVideoFileName = (fileName: string): string => {
+    const match = fileName.match(/\.[a-zA-Z0-9]+$/);
+    const extension = match ? match[0].toLowerCase() : ".mp4";
+    return `video${extension}`;
+};
+
 const getImsmanifestXML = (data: ScormPackageData): string => {
     const { settings } = data;
     const courseIdentifier = `com.v-scorm.course.${Date.now()}`;
     const escapedTitle = settings.courseTitle.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const packagedVideoFileName = getPackagedVideoFileName(data.videoData.file.name);
 
     if (settings.scormVersion === '1.2') {
         return `<?xml version="1.0" standalone="no" ?>
@@ -63,7 +70,7 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
   <resources>
     <resource identifier="res_1" type="webcontent" adlcp:scormtype="sco" href="index.html">
       <file href="index.html"/>
-      <file href="video.mp4"/>
+      <file href="${packagedVideoFileName}"/>
     </resource>
   </resources>
 </manifest>`;
@@ -90,7 +97,7 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
   <resources>
     <resource identifier="res_1" type="webcontent" adlcp:scormType="sco" href="index.html">
       <file href="index.html"/>
-      <file href="video.mp4"/>
+      <file href="${packagedVideoFileName}"/>
     </resource>
   </resources>
 </manifest>`;
@@ -114,6 +121,7 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
 const getIndexHTML = (data: ScormPackageData, isTestMode = false, packageMetadata?: ScormPackageMetadata): string => {
     const { videoData, learningObjectives, quizBank, settings, generateQuiz = true } = data;
     const metadata = packageMetadata || buildPackageMetadata(data);
+    const packagedVideoFileName = getPackagedVideoFileName(videoData.file.name);
 
     // Filtra domande non supportate o malformate (solo se generateQuiz è true)
     const validQuizBank = generateQuiz ? quizBank.filter((q) => {
@@ -588,7 +596,7 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false, packageMetadat
           <div class="bg-white p-8 rounded-lg shadow-lg">
             <h1 class="text-3xl font-bold mb-4">\${courseData.title}</h1>
             <div class="relative mb-6">
-              <video id="courseVideo" src="video.mp4" class="w-full rounded-md" playsinline \${controlsAttr}></video>
+              <video id="courseVideo" src="${packagedVideoFileName}" class="w-full rounded-md" playsinline \${controlsAttr}></video>
               \${customControlsHTML}
             </div>
             \${quizButtonHTML}
@@ -758,8 +766,14 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false, packageMetadat
           if (playPauseBtn) {
             playPauseBtn.addEventListener("click", () => {
               if (video.paused) {
-                video.play();
-                if (playPauseText) playPauseText.textContent = "Pausa";
+                video.play()
+                  .then(() => {
+                    if (playPauseText) playPauseText.textContent = "Pausa";
+                  })
+                  .catch((error) => {
+                    console.warn("Errore avvio video:", error);
+                    alert("Impossibile avviare il video. Verifica formato file e console browser.");
+                  });
               } else {
                 video.pause();
                 if (playPauseText) playPauseText.textContent = "Play";
@@ -1009,6 +1023,7 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false, packageMetadat
 export const createScormPackage = async (data: ScormPackageData) => {
     const zip = new JSZip();
     const packageMetadata = buildPackageMetadata(data);
+    const packagedVideoFileName = getPackagedVideoFileName(data.videoData.file.name);
 
     // 1. Add imsmanifest.xml
     zip.file("imsmanifest.xml", getImsmanifestXML(data));
@@ -1017,7 +1032,7 @@ export const createScormPackage = async (data: ScormPackageData) => {
     zip.file("index.html", getIndexHTML(data, false, packageMetadata));
     
     // 3. Add video file
-    zip.file("video.mp4", data.videoData.file);
+    zip.file(packagedVideoFileName, data.videoData.file);
 
     // 4. Generate and download zip
     const content = await zip.generateAsync({ type: "blob" });
