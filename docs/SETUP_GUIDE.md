@@ -58,6 +58,9 @@ GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
 # Clerk Publishable Key (PUBBLICA - sicura per client)
 # Ottieni da: https://dashboard.clerk.com/ → API Keys
 VITE_CLERK_PUBLISHABLE_KEY=YOUR_CLERK_KEY_HERE
+
+# Endpoint reporting SCORM incorporato nel pacchetto generato
+VITE_SCORM_REPORTING_ENDPOINT=https://YOUR-SITE.netlify.app/.netlify/functions/scorm-events
 ```
 
 ⚠️ **IMPORTANTE**: Non committare `.env.local` su Git!
@@ -147,6 +150,12 @@ node --version
 2. Assicurati che sia la Publishable Key, non Secret
 3. Riavvia dev server dopo cambio `.env.local`
 
+### ❌ Reporting SCORM non funziona
+1. Verifica `VITE_SCORM_REPORTING_ENDPOINT` in `.env.local`
+2. Controlla che il sito Netlify abbia fatto redeploy dopo le env vars
+3. Rigenera il pacchetto SCORM dopo il deploy
+4. Verifica tabelle e RPC in Supabase
+
 ### ❌ Gemini API key non riconosciuta
 1. Ottieni nuova key da [Google AI Studio](https://aistudio.google.com/app/apikey)
 2. Incolla nel bottone lock/key nell'app (NON in `.env.local`)
@@ -177,6 +186,7 @@ node --version
 3. Verifica gestione domande
 4. Esporta SCORM
 5. Controlla file .zip generato
+6. Se usi reporting: clicca `Test reporting` e controlla Supabase
 
 ### Dark Mode
 - Clicca icona luna nell'header per toggle

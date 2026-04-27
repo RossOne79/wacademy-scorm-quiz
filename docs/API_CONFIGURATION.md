@@ -245,6 +245,72 @@ git config --global --add safe.directory F:/wacademy
 - 🔗 [Clerk Documentation](https://clerk.com/docs)
 - 🔗 [SCORM Standard](https://scorm.com/)
 - 🔗 [React Clerk Integration](https://clerk.com/docs/quickstarts/react)
+- 🔗 [Supabase Docs](https://supabase.com/docs)
+- 🔗 [Netlify Functions Docs](https://docs.netlify.com/functions/overview/)
+
+---
+
+## 📊 SCORM Reporting + Supabase
+
+### A cosa serve
+
+Questa integrazione aggiunge un tracciamento esterno oltre al normale salvataggio SCORM nell'LMS:
+
+- eventi di caricamento pacchetto
+- avvio sessione
+- avvio tentativo
+- avanzamento video
+- completamento quiz
+- chiusura tentativo
+- export CSV dei tentativi
+
+### Variabili ambiente richieste
+
+#### Netlify Functions
+```env
+SCORM_REPORTING_SUPABASE_URL=https://your-project.supabase.co
+SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
+
+#### Build client / Vite
+```env
+VITE_SCORM_REPORTING_ENDPOINT=https://your-site.netlify.app/.netlify/functions/scorm-events
+```
+
+### Dove trovare i valori in Supabase
+
+1. Apri il progetto Supabase
+2. Vai in `Project Settings`
+3. Apri `API` o `API Keys`
+4. Copia:
+   - `Project URL` come `SCORM_REPORTING_SUPABASE_URL`
+   - `service_role` come `SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY`
+
+Importante:
+
+- usa l'URL base progetto, non `.../rest/v1/`
+- la `service_role` va solo lato server, mai nel browser
+
+### Configurazione database
+
+In Supabase devi creare:
+
+- tabella `scorm_attempts`
+- tabella `scorm_attempt_events`
+- funzione SQL `merge_scorm_attempt_event`
+
+La guida completa, con SQL pronto da incollare, è qui:
+
+- [scorm-reporting-setup.md](./scorm-reporting-setup.md)
+
+### Flusso corretto di deploy
+
+1. imposta le env vars su Netlify
+2. crea tabelle e RPC in Supabase
+3. fai un nuovo deploy Netlify
+4. genera un nuovo pacchetto SCORM
+5. apri il corso e usa `Test reporting`
+6. verifica i record in Supabase
 
 ---
 

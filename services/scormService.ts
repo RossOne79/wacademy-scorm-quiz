@@ -10,7 +10,31 @@ interface ScormPackageData {
   generateQuiz?: boolean; // Flag per includere o meno il quiz nel pacchetto
 }
 
+interface ScormPackageMetadata {
+  packageId: string;
+  packageVersion: string;
+  reportingEndpoint: string;
+}
+
 // ---- SCORM File Templates ----
+
+const slugifyValue = (value: string): string => {
+    return value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 80) || "scorm-package";
+};
+
+const buildPackageMetadata = (data: ScormPackageData): ScormPackageMetadata => {
+    const reportingEndpoint = (import.meta.env.VITE_SCORM_REPORTING_ENDPOINT || "").trim();
+    return {
+        packageId: slugifyValue(data.settings.courseTitle),
+        packageVersion: new Date().toISOString(),
+        reportingEndpoint
+    };
+};
 
 const getImsmanifestXML = (data: ScormPackageData): string => {
     const { settings } = data;
@@ -87,8 +111,9 @@ const getImsmanifestXML = (data: ScormPackageData): string => {
  *   video.addEventListener('click', ...) ❌
  *   console.warn('messaggio', e) ❌
  */
-const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
+const getIndexHTML = (data: ScormPackageData, isTestMode = false, packageMetadata?: ScormPackageMetadata): string => {
     const { videoData, learningObjectives, quizBank, settings, generateQuiz = true } = data;
+    const metadata = packageMetadata || buildPackageMetadata(data);
 
     // Filtra domande non supportate o malformate (solo se generateQuiz è true)
     const validQuizBank = generateQuiz ? quizBank.filter((q) => {
@@ -191,9 +216,42 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       }
       ` : ''}
 
-      window.addEventListener('load', init);
-      window.addEventListener('beforeunload', function() {
-        if (API) { ${settings.scormVersion === '1.2' ? 'API.LMSFinish("");' : 'API.Terminate("");'} }
+      function setSessionTime() {
+        if (!API) return;
+        const now = new Date();
+        const sessionDurationMs = now - sessionStartTime;
+        const totalSeconds = Math.floor(sessionDurationMs / 1000);
+
+        if (courseData.settings.scormVersion === "1.2") {
+          const hours = Math.min(99, Math.floor(totalSeconds / 3600));
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const seconds = totalSeconds % 60;
+          const timeString = String(hours).padStart(2, "0") + ":" +
+                           String(minutes).padStart(2, "0") + ":" +
+                           String(seconds).padStart(2, "0");
+          API.LMSSetValue("cmi.core.session_time", timeString);
+        } else {
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          const seconds = totalSeconds % 60;
+          const timeString = "PT" + hours + "H" + minutes + "M" + seconds + "S";
+          API.SetValue("cmi.session_time", timeString);
+        }
+      }
+
+      window.addEventListener("load", init);
+      window.addEventListener("beforeunload", function() {
+        if (typeof window.persistVideoExitTimestamp === "function") {
+          try {
+            window.persistVideoExitTimestamp();
+          } catch (e) {
+            console.warn("[SCORM] Exit timestamp save failed:", e);
+          }
+        }
+        if (API) {
+          setSessionTime();
+          ${settings.scormVersion === '1.2' ? 'API.LMSFinish("");' : 'API.Terminate("");'}
+        }
       });
     </script>
 
@@ -206,7 +264,12 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         quiz: ${JSON.stringify(finalQuiz)},
         settings: ${JSON.stringify(settings)},
         duration: ${videoData.duration},
-        generateQuiz: ${generateQuiz}
+        generateQuiz: ${generateQuiz},
+        packageId: "${metadata.packageId}",
+        packageVersion: "${metadata.packageVersion}",
+        reporting: {
+          endpoint: "${metadata.reportingEndpoint.replace(/"/g, '\\"')}"
+        }
       };
       
       const app = document.getElementById('app');
@@ -214,6 +277,23 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
       let currentQuestionIndex = 0;
       let userAnswers = {};
       let quizStartTime;
+      let sessionStartTime = new Date();
+      let suspendData = {
+        maxWatched: 0,
+        videoStartTimestamp: "",
+        videoEndTimestamp: "",
+        attemptId: ""
+      };
+      let latestAttemptState = {
+        completionStatus: "",
+        successStatus: "",
+        rawScore: null,
+        maxScore: null,
+        scaledScore: null,
+        passed: null
+      };
+      let lastProgressEventSecond = 0;
+      let reportingStatusMessage = "";
 
       function render() {
         if (currentPage === 'start') renderStartPage();
@@ -222,11 +302,225 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         else if (currentPage === 'results' && courseData.generateQuiz) renderResultsPage();
       }
 
+      function generateAttemptId() {
+        return "attempt_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+      }
+
+      function getLearnerInfo() {
+        if (!API) {
+          return { learnerId: "", learnerName: "" };
+        }
+
+        const getMethod = courseData.settings.scormVersion === "1.2" ? "LMSGetValue" : "GetValue";
+        const learnerIdKey = courseData.settings.scormVersion === "1.2" ? "cmi.core.student_id" : "cmi.learner_id";
+        const learnerNameKey = courseData.settings.scormVersion === "1.2" ? "cmi.core.student_name" : "cmi.learner_name";
+
+        try {
+          return {
+            learnerId: API[getMethod](learnerIdKey) || "",
+            learnerName: API[getMethod](learnerNameKey) || ""
+          };
+        } catch (e) {
+          console.warn("[SCORM REPORTING] Unable to read learner info:", e);
+          return { learnerId: "", learnerName: "" };
+        }
+      }
+
+      function persistSuspendData() {
+        if (!API) return;
+        try {
+          const suspendKey = "cmi.suspend_data";
+          const setValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSSetValue" : "SetValue";
+          const commitMethod = courseData.settings.scormVersion === "1.2" ? "LMSCommit" : "Commit";
+          const data = JSON.stringify({
+            maxWatched: suspendData.maxWatched,
+            videoStartTimestamp: suspendData.videoStartTimestamp,
+            videoEndTimestamp: suspendData.videoEndTimestamp,
+            attemptId: suspendData.attemptId
+          });
+          API[setValueMethod](suspendKey, data);
+          API[commitMethod]("");
+        } catch (e) {
+          console.warn("Errore nel salvataggio del progresso:", e);
+        }
+      }
+
+      function ensureAttemptId() {
+        if (!suspendData.attemptId) {
+          suspendData.attemptId = generateAttemptId();
+          persistSuspendData();
+        }
+        return suspendData.attemptId;
+      }
+
+      function buildReportingPayload(eventType, extraData) {
+        const learnerInfo = getLearnerInfo();
+        return {
+          eventType: eventType,
+          eventTimestamp: new Date().toISOString(),
+          packageId: courseData.packageId,
+          packageTitle: courseData.title,
+          packageVersion: courseData.packageVersion,
+          learnerId: learnerInfo.learnerId,
+          learnerName: learnerInfo.learnerName,
+          attemptId: ensureAttemptId(),
+          scormVersion: courseData.settings.scormVersion,
+          lastLocation: currentPage,
+          videoStartTimestamp: suspendData.videoStartTimestamp || null,
+          videoEndTimestamp: suspendData.videoEndTimestamp || null,
+          sessionTimeSeconds: Math.floor((new Date() - sessionStartTime) / 1000),
+          maxWatchedSeconds: suspendData.maxWatched || 0,
+          completionStatus: latestAttemptState.completionStatus,
+          successStatus: latestAttemptState.successStatus,
+          rawScore: latestAttemptState.rawScore,
+          maxScore: latestAttemptState.maxScore,
+          scaledScore: latestAttemptState.scaledScore,
+          passed: latestAttemptState.passed,
+          suspendData: suspendData,
+          ...extraData
+        };
+      }
+
+      function sendReportingEvent(eventType, extraData = {}, preferBeacon = false) {
+        const endpoint = courseData.reporting && courseData.reporting.endpoint;
+        if (!endpoint) {
+          return;
+        }
+
+        try {
+          const payload = buildReportingPayload(eventType, extraData);
+          const body = JSON.stringify(payload);
+
+          if (preferBeacon && navigator.sendBeacon) {
+            const blob = new Blob([body], { type: "application/json" });
+            navigator.sendBeacon(endpoint, blob);
+            return;
+          }
+
+          fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body,
+            keepalive: preferBeacon
+          }).catch((error) => {
+            console.warn("[SCORM REPORTING] Failed to send event:", error);
+          });
+        } catch (e) {
+          console.warn("[SCORM REPORTING] Failed to build event payload:", e);
+        }
+      }
+
+      async function runReportingDiagnostic() {
+        const endpoint = courseData.reporting && courseData.reporting.endpoint;
+        if (!endpoint) {
+          reportingStatusMessage = "Reporting non configurato nel pacchetto.";
+          render();
+          return;
+        }
+
+        try {
+          const payload = buildReportingPayload("diagnostic_ping", {
+            diagnostic: true,
+            source: "manual_test_button"
+          });
+
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+          }
+
+          reportingStatusMessage = "Test reporting inviato con successo.";
+        } catch (e) {
+          console.warn("[SCORM REPORTING] Diagnostic ping failed:", e);
+          reportingStatusMessage = "Errore nel test reporting: " + (e && e.message ? e.message : "richiesta bloccata");
+        }
+
+        render();
+      }
+
+      window.runReportingDiagnostic = function() {
+        runReportingDiagnostic();
+      };
+
+      function loadSuspendData() {
+        if (!API) return;
+        try {
+          const suspendKey = "cmi.suspend_data";
+          const getValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSGetValue" : "GetValue";
+          const rawData = API[getValueMethod](suspendKey);
+
+          if (!rawData || rawData.trim() === "") {
+            return;
+          }
+
+          const parsedData = JSON.parse(rawData);
+          if (!parsedData || typeof parsedData !== "object") {
+            return;
+          }
+
+          suspendData.maxWatched = typeof parsedData.maxWatched === "number" && isFinite(parsedData.maxWatched)
+            ? parsedData.maxWatched
+            : 0;
+          suspendData.videoStartTimestamp = typeof parsedData.videoStartTimestamp === "string"
+            ? parsedData.videoStartTimestamp
+            : "";
+          suspendData.videoEndTimestamp = typeof parsedData.videoEndTimestamp === "string"
+            ? parsedData.videoEndTimestamp
+            : "";
+          suspendData.attemptId = typeof parsedData.attemptId === "string"
+            ? parsedData.attemptId
+            : "";
+        } catch (e) {
+          console.warn("Errore nel caricamento del progresso:", e);
+        }
+      }
+
+      function markVideoStartTimestamp() {
+        const shouldStartNewSession = !suspendData.videoStartTimestamp || !!suspendData.videoEndTimestamp;
+        if (!shouldStartNewSession) {
+          return;
+        }
+
+        suspendData.videoStartTimestamp = new Date().toISOString();
+        suspendData.videoEndTimestamp = "";
+        suspendData.attemptId = generateAttemptId();
+        persistSuspendData();
+        sendReportingEvent("attempt_started");
+      }
+
+      function markVideoEndTimestamp() {
+        if (!suspendData.videoStartTimestamp || suspendData.videoEndTimestamp) {
+          return;
+        }
+
+        suspendData.videoEndTimestamp = new Date().toISOString();
+        persistSuspendData();
+      }
+
+      window.persistVideoExitTimestamp = function() {
+        markVideoEndTimestamp();
+        sendReportingEvent("attempt_ended", {}, true);
+      };
+
       function setLocation(page) {
+        const previousPage = currentPage;
         currentPage = page;
         if(API) {
           const key = courseData.settings.scormVersion === '1.2' ? 'cmi.core.lesson_location' : 'cmi.location';
           API.${settings.scormVersion === '1.2' ? 'LMSSetValue' : 'SetValue'}(key, page);
+        }
+        if (page === "video" && previousPage === "start") {
+          ensureAttemptId();
+          sendReportingEvent("session_started");
         }
         render();
       }
@@ -238,6 +532,21 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
             \${courseData.objectives.map(o => \`<li>\${o}</li>\`).join('')}
           </ul>
         \` : '';
+        const reportingSection = courseData.reporting && courseData.reporting.endpoint ? \`
+          <div class="mt-6 border border-gray-200 rounded-lg p-4 text-left bg-gray-50">
+            <p class="text-sm font-semibold text-gray-800 mb-2">Diagnostica Reporting</p>
+            <p class="text-xs text-gray-600 break-all mb-3">\${courseData.reporting.endpoint}</p>
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+              <button onclick="runReportingDiagnostic()" class="bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-gray-900">Test reporting</button>
+              <p class="text-sm text-gray-600">\${reportingStatusMessage || "Nessun test eseguito."}</p>
+            </div>
+          </div>
+        \` : \`
+          <div class="mt-6 border border-yellow-200 rounded-lg p-4 text-left bg-yellow-50">
+            <p class="text-sm font-semibold text-yellow-800">Reporting non configurato</p>
+            <p class="text-sm text-yellow-700 mt-1">Questo pacchetto non ha un endpoint di reporting incorporato.</p>
+          </div>
+        \`;
 
         app.innerHTML = \`
           <div class="bg-white p-8 rounded-lg shadow-lg text-center">
@@ -246,6 +555,7 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
             <p class="text-gray-600 mb-4">Durata: \${Math.ceil(courseData.duration/60)} minuti</p>
             \${objectivesSection}
             <button onclick="setLocation('video')" class="bg-blue-600 text-white px-8 py-3 rounded-md font-semibold hover:bg-blue-700">Inizia Corso</button>
+            \${reportingSection}
           </div>
         \`;
       }
@@ -316,39 +626,18 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
         
         // Carica il progresso salvato da SCORM
         function loadProgress() {
-          if (!API) return;
-          try {
-            const suspendKey = courseData.settings.scormVersion === "1.2" ? "cmi.suspend_data" : "cmi.suspend_data";
-            const getValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSGetValue" : "GetValue";
-            const rawData = API[getValueMethod](suspendKey);
-            
-            if (rawData && rawData.trim() !== '') {
-              const data = JSON.parse(rawData);
-              if (typeof data.maxWatched === 'number' && data.maxWatched > 0) {
-                maxWatched = data.maxWatched;
-                lastValidTime = maxWatched;
-                video.currentTime = maxWatched;
-              }
-            }
-          } catch (e) {
-            console.warn("Errore nel caricamento del progresso:", e);
+          loadSuspendData();
+          if (typeof suspendData.maxWatched === "number" && suspendData.maxWatched > 0) {
+            maxWatched = suspendData.maxWatched;
+            lastValidTime = maxWatched;
+            video.currentTime = maxWatched;
           }
         }
         
         // Salva il progresso in SCORM
         function saveProgress() {
-          if (!API) return;
-          try {
-            const suspendKey = courseData.settings.scormVersion === "1.2" ? "cmi.suspend_data" : "cmi.suspend_data";
-            const setValueMethod = courseData.settings.scormVersion === "1.2" ? "LMSSetValue" : "SetValue";
-            const commitMethod = courseData.settings.scormVersion === "1.2" ? "LMSCommit" : "Commit";
-            
-            const data = JSON.stringify({ maxWatched: maxWatched });
-            API[setValueMethod](suspendKey, data);
-            API[commitMethod]("");
-          } catch (e) {
-            console.warn("Errore nel salvataggio del progresso:", e);
-          }
+          suspendData.maxWatched = maxWatched;
+          persistSuspendData();
         }
         
         // Aggiorna il tempo visualizzato
@@ -377,8 +666,18 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
               saveProgress();
             }
           }
+
+          const currentSecond = Math.floor(maxWatched);
+          if (currentSecond > 0 && currentSecond - lastProgressEventSecond >= 15) {
+            lastProgressEventSecond = currentSecond;
+            sendReportingEvent("progress_updated");
+          }
           
           updateTimeDisplay();
+        });
+
+        video.addEventListener("play", () => {
+          markVideoStartTimestamp();
         });
         
         // Blocca qualsiasi tentativo di seek (avanti o indietro) solo se i controlli sono nascosti
@@ -501,6 +800,14 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
               completionMsg.classList.add("text-green-600", "font-semibold");
             }
 
+            latestAttemptState.completionStatus = "completed";
+            latestAttemptState.successStatus = "passed";
+            latestAttemptState.rawScore = 100;
+            latestAttemptState.maxScore = 100;
+            latestAttemptState.scaledScore = 1;
+            latestAttemptState.passed = true;
+            markVideoEndTimestamp();
+
             // Segna il corso come completato in SCORM (senza quiz)
             if (API) {
               try {
@@ -518,6 +825,7 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
                 console.warn("Errore nell\\'aggiornamento dello stato SCORM:", e);
               }
             }
+            sendReportingEvent("attempt_ended");
           }
         });
         
@@ -621,6 +929,14 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
           const maxScore = courseData.quiz.length;
           const scaledScore = (rawScore / maxScore) * 100;
           const passed = scaledScore >= courseData.settings.passingScore;
+
+          latestAttemptState.completionStatus = "completed";
+          latestAttemptState.successStatus = passed ? "passed" : "failed";
+          latestAttemptState.rawScore = rawScore;
+          latestAttemptState.maxScore = maxScore;
+          latestAttemptState.scaledScore = Number((scaledScore / 100).toFixed(2));
+          latestAttemptState.passed = passed;
+          markVideoEndTimestamp();
           
           if(API) {
             if(courseData.settings.scormVersion === '1.2') {
@@ -641,6 +957,9 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
               API.SetValue('cmi.exit', 'suspend');
             }
           }
+
+          sendReportingEvent("quiz_completed");
+          sendReportingEvent("attempt_ended");
           
           setLocation('results');
       }
@@ -676,6 +995,9 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
           currentPage = location;
         }
       }
+      window.addEventListener("load", function() {
+        sendReportingEvent("package_loaded");
+      });
       render();
     </script>
 </body>
@@ -686,12 +1008,13 @@ const getIndexHTML = (data: ScormPackageData, isTestMode = false): string => {
 
 export const createScormPackage = async (data: ScormPackageData) => {
     const zip = new JSZip();
+    const packageMetadata = buildPackageMetadata(data);
 
     // 1. Add imsmanifest.xml
     zip.file("imsmanifest.xml", getImsmanifestXML(data));
 
     // 2. Add index.html (the SCO)
-    zip.file("index.html", getIndexHTML(data));
+    zip.file("index.html", getIndexHTML(data, false, packageMetadata));
     
     // 3. Add video file
     zip.file("video.mp4", data.videoData.file);
@@ -708,7 +1031,8 @@ export const createScormPackage = async (data: ScormPackageData) => {
 };
 
 export const testInBrowser = async (data: ScormPackageData) => {
-    const htmlContent = getIndexHTML(data, true);
+    const packageMetadata = buildPackageMetadata(data);
+    const htmlContent = getIndexHTML(data, true, packageMetadata);
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const videoBlob = new Blob([data.videoData.file], { type: data.videoData.file.type });

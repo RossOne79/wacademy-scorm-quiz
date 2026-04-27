@@ -23,6 +23,7 @@
 - **SCORM 2004 3rd Edition**: Standard moderno
 - **Configurazione**: Titolo, numero domande, punteggio minimo, tentativi
 - **Anteprima browser**: Testa il corso prima di scaricare
+- **Reporting esterno opzionale**: Invio eventi SCORM a Netlify Functions + Supabase
 
 ### 🎨 Tema Personalizzabile
 - **Colori**: Scegli il colore primario con picker esadecimale
@@ -37,6 +38,8 @@
 - **Cronologia sessioni**: Ripristina ultimi lavori
 - **Cronologia quiz**: Accedi alle generazioni precedenti
 - **Dark mode**: Supporto completo tema scuro
+- **Tracking LMS**: Salvataggio progresso in `cmi.suspend_data`
+- **Tracking esterno**: Eventi tentativo esportabili in Supabase/CSV
 
 ### 🔐 Autenticazione Sicura
 - **Clerk Integration**: Gestione utenti professionale
@@ -54,6 +57,9 @@
 ### **Variabili d'Ambiente Netlify**
 ```
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+VITE_SCORM_REPORTING_ENDPOINT=https://wacademy-scorm-quiz.netlify.app/.netlify/functions/scorm-events
+SCORM_REPORTING_SUPABASE_URL=https://your-project.supabase.co
+SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
 ---
@@ -79,6 +85,7 @@ npm install
 # Configura variabili d'ambiente
 echo 'GEMINI_API_KEY=YOUR_KEY' > .env.local
 echo 'VITE_CLERK_PUBLISHABLE_KEY=YOUR_KEY' >> .env.local
+echo 'VITE_SCORM_REPORTING_ENDPOINT=https://YOUR-SITE.netlify.app/.netlify/functions/scorm-events' >> .env.local
 
 # Avvia dev server
 npm run dev
@@ -95,6 +102,7 @@ npm run dev
 | **Build** | Vite 6.2 |
 | **Styling** | Tailwind CSS 3 |
 | **AI/APIs** | Google Gemini 2.5-flash, Clerk |
+| **Reporting** | Netlify Functions + Supabase |
 | **Packaging** | JSZip (SCORM) |
 | **Hosting** | Netlify |
 
@@ -163,6 +171,19 @@ wacademy/
    VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
    ```
 
+### **SCORM Reporting** (Opzionale ma consigliato)
+1. Configura in Netlify:
+   ```
+   SCORM_REPORTING_SUPABASE_URL=https://your-project.supabase.co
+   SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=...
+   VITE_SCORM_REPORTING_ENDPOINT=https://your-site.netlify.app/.netlify/functions/scorm-events
+   ```
+2. Crea in Supabase:
+   - tabella `scorm_attempts`
+   - tabella `scorm_attempt_events`
+   - funzione `merge_scorm_attempt_event`
+3. Rigenera il pacchetto SCORM dopo il deploy, perché l'endpoint viene incorporato nello ZIP
+
 ---
 
 ## 🧪 Build & Deploy
@@ -185,6 +206,9 @@ npm run preview
 - **[SETUP_GUIDE.md](./docs/SETUP_GUIDE.md)** - Guida installazione dettagliata
 - **[DEPLOYMENT.md](./docs/DEPLOYMENT.md)** - Deploy su Netlify
 - **[USER_GUIDE.md](./docs/USER_GUIDE.md)** - Manuale utente
+- **[API_CONFIGURATION.md](./docs/API_CONFIGURATION.md)** - Configurazione Gemini, Clerk e reporting
+- **[scorm-reporting-setup.md](./docs/scorm-reporting-setup.md)** - Setup passo passo Supabase + Netlify
+- **[confronto-mediaToScorm-DeSieno-checklist.md](./docs/confronto-mediaToScorm-DeSieno-checklist.md)** - Gap analysis e roadmap
 
 ---
 
