@@ -33,7 +33,7 @@ Significa che **tu fornisci la tua chiave API Gemini**. L'app non ha un backend 
 #### Via .env.local (Development)
 ```env
 # .env.local
-GEMINI_API_KEY=AIzaSyD6jIb3DhWai4TRo-kxjZyseX7pDrMqfXk
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
 ⚠️ **Nota**: Non usiamo GEMINI_API_KEY in produzione (Netlify)
@@ -119,13 +119,13 @@ Servizio di **autenticazione e gestione utenti** (come Auth0, Firebase Auth)
 
 #### Development (.env.local)
 ```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+VITE_CLERK_PUBLISHABLE_KEY=YOUR_CLERK_PUBLISHABLE_KEY
 ```
 
 #### Production (Netlify)
 **Settings** → **Environment** → **Add variable**
 ```
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+VITE_CLERK_PUBLISHABLE_KEY=YOUR_CLERK_PUBLISHABLE_KEY
 ```
 
 ### Flusso di Autenticazione
@@ -179,7 +179,7 @@ Nel Clerk Dashboard:
 
 ```
 Nome:  VITE_CLERK_PUBLISHABLE_KEY
-Valore: pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+Valore: YOUR_CLERK_PUBLISHABLE_KEY
 ```
 
 ⚠️ **Nota importante**:
@@ -269,7 +269,7 @@ Questa integrazione aggiunge un tracciamento esterno oltre al normale salvataggi
 #### Netlify Functions
 ```env
 SCORM_REPORTING_SUPABASE_URL=https://your-project.supabase.co
-SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 ```
 
 #### Build client / Vite

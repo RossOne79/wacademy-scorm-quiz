@@ -35,7 +35,7 @@ Durante o dopo il setup:
 3. Aggiungi:
    ```
    Nome: VITE_CLERK_PUBLISHABLE_KEY
-   Valore: pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
+   Valore: YOUR_CLERK_PUBLISHABLE_KEY
    ```
 4. Aggiungi anche:
    ```
@@ -49,7 +49,7 @@ Durante o dopo il setup:
    ```
    ```
    Nome: SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY
-   Valore: your_service_role_key
+   Valore: YOUR_SUPABASE_SERVICE_ROLE_KEY
    ```
 6. **Redeploy site** per applicare le variabili
 

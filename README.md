@@ -56,10 +56,10 @@
 
 ### **Variabili d'Ambiente Netlify**
 ```
-VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2hhbXBpb24tdGFkcG9sZS00NC5jbGVyay5hY2NvdW50cy5kZXYk
-VITE_SCORM_REPORTING_ENDPOINT=https://wacademy-scorm-quiz.netlify.app/.netlify/functions/scorm-events
-SCORM_REPORTING_SUPABASE_URL=https://your-project.supabase.co
-SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+VITE_CLERK_PUBLISHABLE_KEY=YOUR_CLERK_PUBLISHABLE_KEY
+VITE_SCORM_REPORTING_ENDPOINT=https://YOUR-SITE.netlify.app/.netlify/functions/scorm-events
+SCORM_REPORTING_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
+SCORM_REPORTING_SUPABASE_SERVICE_ROLE_KEY=YOUR_SUPABASE_SERVICE_ROLE_KEY
 ```
 
 ---
@@ -168,7 +168,7 @@ wacademy/
 2. Copia Publishable Key
 3. Configura in `.env.local`:
    ```
-   VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+   VITE_CLERK_PUBLISHABLE_KEY=YOUR_CLERK_PUBLISHABLE_KEY
    ```
 
 ### **SCORM Reporting** (Opzionale ma consigliato)
