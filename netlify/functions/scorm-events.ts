@@ -78,13 +78,22 @@ export const handler: Handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}") as ScormEventPayload;
 
-    if (!body.packageId || !body.packageTitle || !body.learnerId || !body.attemptId || !body.eventType) {
+    if (!body.packageId || !body.packageTitle || !body.attemptId || !body.eventType) {
       return {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({ error: "Missing required SCORM event fields" }),
       };
     }
+
+    const normalizedLearnerId =
+      typeof body.learnerId === "string" && body.learnerId.trim().length > 0
+        ? body.learnerId.trim()
+        : "anonymous";
+    const normalizedLearnerName =
+      typeof body.learnerName === "string" && body.learnerName.trim().length > 0
+        ? body.learnerName.trim()
+        : "Anonymous learner";
 
     const supabase = createClient(supabaseUrl, supabaseApiKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -96,8 +105,8 @@ export const handler: Handler = async (event) => {
       package_id: body.packageId,
       package_title: body.packageTitle,
       package_version: body.packageVersion || null,
-      learner_id: body.learnerId,
-      learner_name: body.learnerName || null,
+      learner_id: normalizedLearnerId,
+      learner_name: normalizedLearnerName,
       attempt_id: body.attemptId,
       video_start_timestamp: parseTimestamp(body.videoStartTimestamp),
       video_end_timestamp: parseTimestamp(body.videoEndTimestamp),
@@ -129,7 +138,7 @@ export const handler: Handler = async (event) => {
 
     const { error: mergeError } = await supabase.rpc("merge_scorm_attempt_event", {
       p_package_id: body.packageId,
-      p_learner_id: body.learnerId,
+      p_learner_id: normalizedLearnerId,
       p_attempt_id: body.attemptId,
       p_event_timestamp: eventTimestamp,
       p_video_start_timestamp: parseTimestamp(body.videoStartTimestamp),
@@ -153,7 +162,7 @@ export const handler: Handler = async (event) => {
 
     const { error: eventInsertError } = await supabase.from("scorm_attempt_events").insert({
       package_id: body.packageId,
-      learner_id: body.learnerId,
+      learner_id: normalizedLearnerId,
       attempt_id: body.attemptId,
       event_type: body.eventType,
       event_timestamp: eventTimestamp,
